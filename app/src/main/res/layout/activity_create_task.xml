@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:layoutDirection="rtl">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="ثبت دستور کار جدید"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#2E7D32"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:id="@+id/tvTaskNumber"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="شماره کار: در حال تولید..."
+        android:layout_marginBottom="15dp" />
+
+    <EditText
+        android:id="@+id/etTaskTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="15dp"
+        android:padding="12dp"
+        android:hint="عنوان کار..."
+
+        android:textDirection="anyRtl"    android:gravity="start|center_vertical" android:textAlignment="viewStart" />
+
+    <EditText
+        android:id="@+id/etTaskDescription"
+        android:layout_width="match_parent"
+        android:layout_height="224dp"
+        android:layout_marginBottom="25dp"
+        android:background="@android:drawable/editbox_background"
+        android:padding="12dp"
+        android:hint="توضیحات..."
+
+        android:textDirection="anyRtl"
+        android:gravity="top|start" />
+
+    <!-- بعد از etTaskDescription و قبل از btnSubmitTask -->
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="واحد مربوطه:"
+        android:textSize="16sp"
+        android:textColor="#2E7D32"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="4dp"/>
+
+    <Spinner
+        android:id="@+id/spinnerUnit"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="@android:drawable/editbox_background"
+        android:padding="8dp"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="درجه اهمیت:"
+        android:textSize="16sp"
+        android:textColor="#2E7D32"
+        android:layout_marginBottom="4dp"/>
+
+    <Spinner
+        android:id="@+id/spinnerPriority"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="@android:drawable/editbox_background"
+        android:padding="8dp"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btnSubmitTask"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:backgroundTint="#2E7D32"
+        android:text="ثبت و ارجاع کار"
+        android:textSize="18sp" />
+
+</LinearLayout>

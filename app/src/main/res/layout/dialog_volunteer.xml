@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:layoutDirection="rtl"
+    android:background="#FFF9E6">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="انتخاب نوع مشارکت"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#2E7D32"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="آیا مسئولیت انجام کار را می‌پذیرید یا مایلید صرفاً به عنوان انجام‌دهنده مشارکت نمایید؟"
+        android:textSize="16sp"
+        android:textColor="#424242"
+        android:gravity="center"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- ✅ ProgressBar اینجا -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"/>
+
+    <!-- دو دکمه بالا -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="2"
+        android:layout_marginBottom="12dp">
+
+        <Button
+            android:id="@+id/btnAcceptResponsibility"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="مسئول انجام کار"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#2E7D32"/>
+
+        <Button
+            android:id="@+id/btnAcceptAssignee"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="انجام‌دهنده"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#2196F3"/>
+
+    </LinearLayout>
+
+    <!-- دکمه انصراف پایین -->
+    <Button
+        android:id="@+id/btnCancel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="انصراف"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#F44336"/>
+
+</LinearLayout>
