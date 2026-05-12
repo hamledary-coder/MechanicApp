@@ -2,6 +2,7 @@ package com.Mechanic.Workshop.ui.auth
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -84,8 +85,14 @@ class LoginActivity : AppCompatActivity() {
 
             override fun onResponse(call: Call, response: Response) {
                 val resBody = response.body?.string()
+                val code = response.code
                 // لاگ برای عیب‌یابی (در Logcat ببینید)
                 println("Login Response: $resBody")
+                Log.d("LOGIN_TEST", "HTTP Code: $code")
+                Log.d("LOGIN_TEST", "Raw Response: $resBody")
+                Log.d("LOGIN_TEST", "Response length: ${resBody?.length}")
+                Log.d("LOGIN_URL", "Login URL: $loginUrl")
+                Log.d("LOGIN_JSON", "Sending: $json")
 
                 try {
                     val jsonRes = JSONObject(resBody ?: "{}")
@@ -104,7 +111,7 @@ class LoginActivity : AppCompatActivity() {
                                 .putString(Config.PrefKeys.USER_ROW_ID, rowId) // کد ردیف ✅ جدید
                                 .putString(Config.PrefKeys.USERNAME, name)
                                 .putString(Config.PrefKeys.USER_ROLE, role)
-                                .apply()
+                                .commit()
 
                             Toast.makeText(this@LoginActivity, "خوش آمدید $name", Toast.LENGTH_LONG).show()
                             // انتقال به صفحه کارتابل

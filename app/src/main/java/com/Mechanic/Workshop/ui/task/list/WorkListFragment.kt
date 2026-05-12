@@ -11,15 +11,18 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.ui.task.list.TaskAdapter
-import com.Mechanic.Workshop.ui.task.list.TaskDetailAdapter
 import com.Mechanic.Workshop.data.remote.Config
-import com.Mechanic.Workshop.ui.task.detail.TaskDetailActivity
+import com.Mechanic.Workshop.ui.task.create.CreateTaskActivity
+import com.Mechanic.Workshop.ui.task.repository.TaskRepository
+import com.Mechanic.Workshop.ui.task.dialog.InviteDialog
+import com.Mechanic.Workshop.ui.referral.ReferDialog
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
@@ -28,11 +31,12 @@ import org.json.JSONArray
 class WorkListFragment : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var adapter: RecyclerView.Adapter<*>  // تغییر به کلاس پدر
+    private lateinit var adapter: RecyclerView.Adapter<*>
     private var status: String? = null
     private var taskList = mutableListOf<TaskModel>()
     private lateinit var loadingLayout: LinearLayout
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+    private lateinit var taskRepository: TaskRepository
 
     companion object {
         @JvmStatic
@@ -46,6 +50,7 @@ class WorkListFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         status = arguments?.getString("status")
+        taskRepository = TaskRepository(requireContext())
     }
 
     override fun onCreateView(
@@ -65,17 +70,22 @@ class WorkListFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(context)
 
         swipeRefreshLayout.setOnRefreshListener {
-            fetchTasksFromGoogleSheet()
+            fetchTasks()
         }
     }
 
     override fun onResume() {
         super.onResume()
-        fetchTasksFromGoogleSheet()
+        fetchTasks()
     }
 
-    private fun fetchTasksFromGoogleSheet() {
-        val url = Config.Endpoints.TASKS
+    fun refreshTasks() {
+        fetchTasks()
+    }
+
+    private fun fetchTasks() {
+        val timestamp = System.currentTimeMillis()
+        val url = "${Config.Endpoints.TASKS}&_=$timestamp"
         hideEmptyState()
 
         val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
@@ -94,6 +104,7 @@ class WorkListFragment : Fragment() {
 
                     try {
                         val jsonArray = JSONArray(response)
+                        fetchAndCacheUsers()
 
                         if (status?.trim() == "کارتابل من" || status?.trim() == "در حال انجام") {
                             fetchAndCacheUsers()
@@ -113,8 +124,16 @@ class WorkListFragment : Fragment() {
                                 assignedTo = obj.optString("assignedTo", ""),
                                 responsible = obj.optString("responsible", ""),
                                 pendingInvites = obj.optString("pendingInvites", ""),
-                                unit = obj.optString("unit", ""),        // ✅ این خط هست؟
-                                priority = obj.optString("priority", "") // ✅ این خط هست؟
+                                unit = obj.optString("unit", ""),
+                                priority = obj.optString("priority", ""),
+                                // فیلدهای جدید
+                                sub_unit = obj.optString("sub_unit", ""),
+                                declaration_method = obj.optString("declaration_method", ""),
+                                requester = obj.optString("requester", ""),
+                                request_date = obj.optString("request_date", ""),
+                                urgency = obj.optString("urgency", ""),
+                                initial_review = obj.optString("initial_review", ""),
+                                system_request_number = obj.optString("system_request_number", "")
                             )
 
                             when (status?.trim()) {
@@ -123,17 +142,14 @@ class WorkListFragment : Fragment() {
                                         taskList.add(task)
                                     }
                                 }
-
                                 "در حال انجام" -> {
                                     if (task.status.startsWith("2")) {
                                         taskList.add(task)
                                     }
                                 }
-
                                 "کارتابل من" -> {
                                     if (task.assignedTo.isNotEmpty()) {
-                                        val assignedList =
-                                            task.assignedTo.split(",").map { it.trim() }
+                                        val assignedList = task.assignedTo.split(",").map { it.trim() }
                                         if (assignedList.contains(currentUserRowId)) {
                                             taskList.add(task)
                                         }
@@ -142,27 +158,17 @@ class WorkListFragment : Fragment() {
                             }
                         }
 
-                        taskList.reverse()
-
-                        // ✅ نمایش پیام در صورت خالی بودن لیست
                         if (taskList.isEmpty()) {
                             showEmptyState()
                         } else {
                             hideEmptyState()
-
-                            when (status?.trim()) {
-                                "انتخاب نشده" -> {
-                                    adapter = TaskAdapter(taskList) { clickedTask ->
-                                        openTaskDetail(clickedTask)
-                                    }
-                                }
-
-                                else -> {
-                                    adapter = TaskDetailAdapter(taskList) { clickedTask ->
-                                        openTaskDetail(clickedTask)
-                                    }
-                                }
-                            }
+                            adapter = ExpandableTaskAdapter(
+                                tasks = taskList,
+                                onEditClick = { task -> openEditTask(task) },
+                                onDeleteClick = { task -> deleteTask(task) },
+                                onReferClick = { task -> referTask(task) },
+                                onVolunteerClick = { task -> volunteerTask(task) }
+                            )
                             recyclerView.adapter = adapter
                             adapter.notifyDataSetChanged()
                         }
@@ -184,11 +190,159 @@ class WorkListFragment : Fragment() {
         Volley.newRequestQueue(requireContext()).add(stringRequest)
     }
 
-    // ✅ توابع جدید برای نمایش پیام خالی
+    // ویرایش کار
+    private fun openEditTask(task: TaskModel) {
+        val intent = Intent(requireContext(), CreateTaskActivity::class.java)
+        intent.putExtra("IS_EDIT", true)
+        intent.putExtra("TASK_ID", task.id)
+        intent.putExtra("TITLE", task.title)
+        intent.putExtra("DESC", task.description)
+        intent.putExtra("UNIT", task.unit)
+        intent.putExtra("PRIORITY", task.priority)
+        // فیلدهای جدید
+        intent.putExtra("SUB_UNIT", task.sub_unit)
+        intent.putExtra("DECLARATION_METHOD", task.declaration_method)
+        intent.putExtra("REQUESTER", task.requester)
+        intent.putExtra("REQUEST_DATE", task.request_date)
+        intent.putExtra("INITIAL_REVIEW", task.initial_review)
+        intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
+        startActivity(intent)
+    }
+
+    // حذف کار (اصلاح شده با runOnUiThread)
+    private fun deleteTask(task: TaskModel) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("حذف کار")
+            .setMessage("آیا از حذف این کار مطمئن هستید؟")
+            .setPositiveButton("بله") { _, _ ->
+                taskRepository.deleteTask(
+                    taskId = task.id,
+                    onSuccess = {
+                        requireActivity().runOnUiThread {
+                            Toast.makeText(context, "کار حذف شد", Toast.LENGTH_SHORT).show()
+                            fetchTasks()
+                        }
+                    },
+                    onError = { message ->
+                        requireActivity().runOnUiThread {
+                            Toast.makeText(context, "خطا: $message", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
+            }
+            .setNegativeButton("خیر", null)
+            .show()
+    }
+
+    // ارجاع کار (اصلاح شده با runOnUiThread)
+    private fun referTask(task: TaskModel) {
+        Log.d("REFER_DEBUG", "1. referTask called for task ${task.id}")
+
+        val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+        val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "")
+
+        Log.d("REFER_DEBUG", "2. User role: $userRole")
+
+        if (userRole != Config.RoleCode.SUPERVISOR && userRole != Config.RoleCode.MANAGER) {
+            Toast.makeText(context, "فقط سرشیفت و مدیر می‌توانند ارجاع دهند", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Log.d("REFER_DEBUG", "3. Creating ReferDialog")
+        val referDialog = ReferDialog(requireContext(), task.id, task.title)
+
+        referDialog.setOnReferSubmitListener { assigneeIds, referralType, responsibleId ->
+            Log.d("REFER_DEBUG", "4. OnSubmit called: assigneeIds=$assigneeIds, responsibleId=$responsibleId")
+            taskRepository.assignTask(
+                taskId = task.id,
+                assigneeIds = assigneeIds,
+                referralType = referralType,
+                responsibleId = responsibleId,
+                onSuccess = {
+                    requireActivity().runOnUiThread {
+                        Toast.makeText(context, "ارجاع با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
+                        fetchTasks()
+                    }
+                },
+                onError = { message ->
+                    requireActivity().runOnUiThread {
+                        Toast.makeText(context, "خطا: $message", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+        }
+        referDialog.show()
+        Log.d("REFER_DEBUG", "5. ReferDialog shown")
+    }
+
+    // داوطلب شدن (اصلاح شده با runOnUiThread)
+    private fun volunteerTask(task: TaskModel) {
+        val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+        val currentUserRowId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+
+        // اگر مسئول دارد و کاربر فعلی مسئول نیست → فقط عضو گروه شود
+        if (task.responsible.isNotEmpty() && task.responsible != currentUserRowId) {
+            taskRepository.volunteer(
+                taskId = task.id,
+                assigneeIds = currentUserRowId,
+                responsibleId = null,
+                onSuccess = {
+                    requireActivity().runOnUiThread {
+                        Toast.makeText(context, "شما به گروه انجام‌دهندگان اضافه شدید", Toast.LENGTH_SHORT).show()
+                        fetchTasks()
+                    }
+                },
+                onError = { message ->
+                    requireActivity().runOnUiThread {
+                        Toast.makeText(context, "خطا: $message", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+        }
+        // اگر مسئول ندارد → خودش مسئول شود و دعوتنامه بفرستد
+        else if (task.responsible.isEmpty()) {
+            val inviteDialog = InviteDialog(requireContext(), taskRepository) { inviteeIds ->
+                if (inviteeIds.isNotEmpty()) {
+                    taskRepository.volunteer(
+                        taskId = task.id,
+                        assigneeIds = currentUserRowId,
+                        responsibleId = currentUserRowId,
+                        onSuccess = {
+                            taskRepository.sendInvite(
+                                taskId = task.id,
+                                inviteeIds = inviteeIds,
+                                onSuccess = {
+                                    requireActivity().runOnUiThread {
+                                        Toast.makeText(context, "مسئولیت ثبت شد و دعوتنامه ارسال گردید", Toast.LENGTH_SHORT).show()
+                                        fetchTasks()
+                                    }
+                                },
+                                onError = { message ->
+                                    requireActivity().runOnUiThread {
+                                        Toast.makeText(context, "دعوتنامه ارسال نشد: $message", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
+                        },
+                        onError = { message ->
+                            requireActivity().runOnUiThread {
+                                Toast.makeText(context, "خطا در ثبت مسئولیت: $message", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
+                }
+            }
+            inviteDialog.show()
+        } else {
+            requireActivity().runOnUiThread {
+                Toast.makeText(context, "شما قبلاً مسئول این کار هستید", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun showEmptyState() {
         val emptyTextView = view?.findViewById<TextView>(R.id.emptyStateText)
         if (emptyTextView == null) {
-            // اگر TextView وجود نداره، ایجاد کن
             val emptyView = LayoutInflater.from(context).inflate(R.layout.empty_state, recyclerView.parent as ViewGroup, false)
             (recyclerView.parent as ViewGroup).addView(emptyView)
         } else {
@@ -202,21 +356,8 @@ class WorkListFragment : Fragment() {
         recyclerView.visibility = View.VISIBLE
     }
 
-    private fun openTaskDetail(task: TaskModel) {
-        val intent = Intent(requireContext(), TaskDetailActivity::class.java)
-        intent.putExtra("TITLE", task.title)
-        intent.putExtra("DESC", task.description)
-        intent.putExtra("CREATOR", task.creator)  // اینو فعلاً بذار بمونه
-        intent.putExtra("DATE", task.createDate)
-        intent.putExtra("TASK_ID", task.id)
-        intent.putExtra("RESPONSIBLE", task.responsible)
-        intent.putExtra("UNIT", task.unit)
-        intent.putExtra("PRIORITY", task.priority)
-        startActivity(intent)
-    }
-
     private fun fetchAndCacheUsers() {
-        val url = "${Config.Endpoints.TASKS}?action=getEmployees"
+        val url = "${Config.BASE_URL}?action=getEmployees"
 
         val request = StringRequest(
             Request.Method.GET, url,

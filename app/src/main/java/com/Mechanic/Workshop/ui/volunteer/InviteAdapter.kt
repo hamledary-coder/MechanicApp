@@ -32,6 +32,11 @@ class InviteAdapter(
         holder.tvName.text = employee.name
         holder.cbSelect.isChecked = selectedIds.contains(employee.id)
 
+        // جلوگیری از فراخوانی مکرر listener
+        holder.cbSelect.setOnCheckedChangeListener(null)
+
+        holder.cbSelect.isChecked = selectedIds.contains(employee.id)
+
         holder.cbSelect.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 selectedIds.add(employee.id)
@@ -50,6 +55,15 @@ class InviteAdapter(
 
     fun updateList(newList: List<Employee>) {
         employees = newList
+        selectedIds.clear()
+        notifyDataSetChanged()
+    }
+
+    // متد برای گرفتن لیست انتخاب‌شده‌ها (در صورت نیاز خارج از Adapter)
+    fun getSelectedIds(): List<String> = selectedIds.toList()
+
+    // متد برای پاک کردن همه انتخاب‌ها
+    fun clearSelections() {
         selectedIds.clear()
         notifyDataSetChanged()
     }

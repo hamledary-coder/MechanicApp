@@ -15,9 +15,11 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        maven { url = uri("https://www.jitpack.io") } // این خط را به این شکل بنویس
         mavenCentral()
     }
 }
 
 rootProject.name = "MechanicApp"
 include(":app")
+

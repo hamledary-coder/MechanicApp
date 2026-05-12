@@ -2,11 +2,11 @@ package com.Mechanic.Workshop.data.remote
 
 object Config {
     // آدرس اسکریپت گوگل
-    const val BASE_URL = "https://script.google.com/macros/s/AKfycbzRcjo_LxnfFA0rms6tBufkw4wrkQD3TMmQ6XgA2efqyH-mD7Oe8xtHe4f9DcoDqnI/exec"
+    const val BASE_URL = "http://mechanicbb1.ir/api.php"
 
     object Endpoints {
         const val LOGIN = BASE_URL
-        const val TASKS = BASE_URL
+        const val TASKS = "$BASE_URL?action=getTasks"
         const val CREATE_TASK = BASE_URL
         const val DELETE_TASK = BASE_URL
     }
@@ -111,7 +111,7 @@ object Config {
             OPERATION -> "بهره‌برداری"
             DESALTER -> "نمکزدایی"
             COMPLEX -> "مجموعه ها"
-            else -> "نامشخص"
+            else -> code
         }
     }
 

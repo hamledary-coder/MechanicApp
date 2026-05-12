@@ -15,8 +15,10 @@ import com.google.android.material.floatingactionbutton.ExtendedFloatingActionBu
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 
-
 class CartableActivity : AppCompatActivity() {
+
+    private lateinit var viewPager: ViewPager2
+    private lateinit var adapter: ViewPagerAdapter
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,17 +26,14 @@ class CartableActivity : AppCompatActivity() {
         setContentView(R.layout.activity_cartable)
 
         val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
-        val viewPager = findViewById<ViewPager2>(R.id.viewPager)
+        viewPager = findViewById(R.id.viewPager)
         val fabAddTask = findViewById<ExtendedFloatingActionButton>(R.id.fabAddTask)
 
-        // تنظیم جهت اسکرول برای فارسی
         viewPager.layoutDirection = ViewPager2.LAYOUT_DIRECTION_RTL
 
-        // اتصال آداپتور
-        val adapter = ViewPagerAdapter(this)
+        adapter = ViewPagerAdapter(this)
         viewPager.adapter = adapter
 
-        // تنظیم تب‌ها با آیکون
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             when (position) {
                 0 -> {
@@ -52,25 +51,33 @@ class CartableActivity : AppCompatActivity() {
             }
         }.attach()
 
-        // باز کردن صفحه ایجاد کار (فعلاً غیرفعال)
         fabAddTask.visibility = View.VISIBLE
         fabAddTask.setOnClickListener {
             val intent = Intent(this, CreateTaskActivity::class.java)
             startActivity(intent)
         }
     }
-}
 
-// آداپتور برای مدیریت تب‌ها
-class ViewPagerAdapter(activity: AppCompatActivity) : FragmentStateAdapter(activity) {
-    override fun getItemCount(): Int = 3
+    override fun onResume() {
+        super.onResume()
+        adapter.refreshAllFragments()
+    }
 
-    override fun createFragment(position: Int): Fragment {
-        return when (position) {
-            0 -> WorkListFragment.Companion.newInstance("کارتابل من")
-            1 -> WorkListFragment.Companion.newInstance("در حال انجام")
-            2 -> WorkListFragment.Companion.newInstance("انتخاب نشده")
-            else -> WorkListFragment.Companion.newInstance("انتخاب نشده")
+    inner class ViewPagerAdapter(activity: AppCompatActivity) : FragmentStateAdapter(activity) {
+        private val fragments = mutableListOf<WorkListFragment>()
+
+        override fun getItemCount(): Int = 3
+
+        override fun createFragment(position: Int): Fragment {
+            return when (position) {
+                0 -> WorkListFragment.newInstance("کارتابل من").also { fragments.add(it) }
+                1 -> WorkListFragment.newInstance("در حال انجام").also { fragments.add(it) }
+                else -> WorkListFragment.newInstance("انتخاب نشده").also { fragments.add(it) }
+            }
+        }
+
+        fun refreshAllFragments() {
+            fragments.forEach { it.refreshTasks() }
         }
     }
 }
