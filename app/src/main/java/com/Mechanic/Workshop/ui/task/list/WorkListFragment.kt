@@ -23,6 +23,7 @@ import com.Mechanic.Workshop.ui.task.create.CreateTaskActivity
 import com.Mechanic.Workshop.ui.task.repository.TaskRepository
 import com.Mechanic.Workshop.ui.task.dialog.InviteDialog
 import com.Mechanic.Workshop.ui.referral.ReferDialog
+import com.Mechanic.Workshop.ui.task.detail.TaskDetailActivity
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
@@ -37,6 +38,7 @@ class WorkListFragment : Fragment() {
     private lateinit var loadingLayout: LinearLayout
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var taskRepository: TaskRepository
+    //private val onItemClick: ((TaskModel) -> Unit)? = null
 
     companion object {
         @JvmStatic
@@ -162,13 +164,54 @@ class WorkListFragment : Fragment() {
                             showEmptyState()
                         } else {
                             hideEmptyState()
-                            adapter = ExpandableTaskAdapter(
-                                tasks = taskList,
-                                onEditClick = { task -> openEditTask(task) },
-                                onDeleteClick = { task -> deleteTask(task) },
-                                onReferClick = { task -> referTask(task) },
-                                onVolunteerClick = { task -> volunteerTask(task) }
-                            )
+
+                            // انتخاب آداپتور مناسب بر اساس وضعیت (با tabType)
+                            when (status?.trim()) {
+                                "انتخاب نشده" -> {
+                                    adapter = ExpandableTaskAdapter(
+                                        tasks = taskList,
+                                        tabType = "unassigned",  // ← اضافه شد
+                                        onEditClick = { task -> openEditTask(task) },
+                                        onDeleteClick = { task -> deleteTask(task) },
+                                        onReferClick = { task -> referTask(task) },
+                                        onVolunteerClick = { task -> volunteerTask(task) }
+                                    )
+                                }
+                                "در حال انجام" -> {
+                                    adapter = ExpandableTaskAdapter(
+                                        tasks = taskList,
+                                        tabType = "inProgress",  // ← اضافه شد
+                                        onEditClick = { task -> openEditTask(task) },
+                                        onDeleteClick = { task -> deleteTask(task) },
+                                        onReferClick = { task -> referTask(task) },
+                                        onVolunteerClick = { task -> volunteerTask(task) },
+                                        onItemClick = { task -> openTaskDetail(task) }
+                                    )
+                                }
+                                "کارتابل من" -> {
+                                    adapter = ExpandableTaskAdapter(
+                                        tasks = taskList,
+                                        tabType = "myCartable",  // ← اضافه شد
+                                        onEditClick = { task -> openEditTask(task) },
+                                        onDeleteClick = { task -> deleteTask(task) },
+                                        onReferClick = { task -> referTask(task) },
+                                        onVolunteerClick = { task -> volunteerTask(task) },
+                                        onItemClick = { task -> openTaskDetail(task) }
+                                    )
+                                }
+                                else -> {
+                                    // حالت پیش‌فرض (نباید اجرا شود)
+                                    adapter = ExpandableTaskAdapter(
+                                        tasks = taskList,
+                                        tabType = "unassigned",
+                                        onEditClick = { task -> openEditTask(task) },
+                                        onDeleteClick = { task -> deleteTask(task) },
+                                        onReferClick = { task -> referTask(task) },
+                                        onVolunteerClick = { task -> volunteerTask(task) }
+                                    )
+                                }
+                            }
+
                             recyclerView.adapter = adapter
                             adapter.notifyDataSetChanged()
                         }
@@ -198,7 +241,6 @@ class WorkListFragment : Fragment() {
         intent.putExtra("TITLE", task.title)
         intent.putExtra("DESC", task.description)
         intent.putExtra("UNIT", task.unit)
-        intent.putExtra("PRIORITY", task.priority)
         // فیلدهای جدید
         intent.putExtra("SUB_UNIT", task.sub_unit)
         intent.putExtra("DECLARATION_METHOD", task.declaration_method)
@@ -206,6 +248,27 @@ class WorkListFragment : Fragment() {
         intent.putExtra("REQUEST_DATE", task.request_date)
         intent.putExtra("INITIAL_REVIEW", task.initial_review)
         intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
+        intent.putExtra("URGENCY", task.urgency)
+        startActivity(intent)
+    }
+
+    private fun openTaskDetail(task: TaskModel) {
+        val intent = Intent(requireContext(), TaskDetailActivity::class.java)
+        intent.putExtra("TASK_ID", task.id)
+        intent.putExtra("TITLE", task.title)
+        intent.putExtra("DESC", task.description)
+        intent.putExtra("CREATOR", task.creator)
+        intent.putExtra("DATE", task.createDate)
+        intent.putExtra("RESPONSIBLE", task.responsible)
+        intent.putExtra("UNIT", task.unit)
+        intent.putExtra("PRIORITY", task.priority)
+        intent.putExtra("SUB_UNIT", task.sub_unit)
+        intent.putExtra("DECLARATION_METHOD", task.declaration_method)
+        intent.putExtra("REQUESTER", task.requester)
+        intent.putExtra("REQUEST_DATE", task.request_date)
+        intent.putExtra("INITIAL_REVIEW", task.initial_review)
+        intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
+        intent.putExtra("URGENCY", task.urgency)
         startActivity(intent)
     }
 

@@ -1,6 +1,7 @@
 package com.Mechanic.Workshop.ui.task.create
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -120,7 +121,7 @@ class CreateTaskActivity : AppCompatActivity() {
             .setTodayButton("امروز")
             .setTodayButtonVisible(true)
             .setInitDate(initYear, initMonth, initDay)
-            .setMinYear(1300)
+            .setMinYear(1400)
             .setMaxYear(PersianDatePickerDialog.THIS_YEAR)
             .setListener(object : PersianPickerListener {
                 override fun onDateSelected(persianPickerDate: PersianPickerDate) {
@@ -139,8 +140,13 @@ class CreateTaskActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
                 val selected = units[position]
 
-                // زیرمجموعه
-                layoutSubUnit.visibility = if (selected == "مجموعه‌ها") View.VISIBLE else View.GONE
+                if (selected == "مجموعه‌ها") {
+                    layoutSubUnit.visibility = View.VISIBLE
+                    // باز کردن خودکار لیست اسپینر زیرمجموعه
+                    spinnerSubUnit.performClick() // <-- این خط جادو رو می‌کنه
+                } else {
+                    layoutSubUnit.visibility = View.GONE
+                }
 
                 // داخلی
                 val isInternal = selected == "داخلی"
@@ -252,6 +258,7 @@ class CreateTaskActivity : AppCompatActivity() {
         val initialReview = etInitialReview.text.toString().trim()
         val systemRequestNumber = etSystemRequestNumber.text.toString().trim()
 
+
         val unit = spinnerUnit.selectedItem?.toString() ?: ""
         val subUnit = if (layoutSubUnit.visibility == View.VISIBLE) {
             spinnerSubUnit.selectedItem?.toString() ?: ""
@@ -286,6 +293,8 @@ class CreateTaskActivity : AppCompatActivity() {
             if (requestDate.isNotEmpty()) put("request_date", requestDate)
             if (initialReview.isNotEmpty()) put("initial_review", initialReview)
             if (systemRequestNumber.isNotEmpty()) put("system_request_number", systemRequestNumber)
+
+            Log.d("DATE_DEBUG","requestDate: $requestDate")
         }
 
         val body = RequestBody.create("application/json; charset=utf-8".toMediaType(), json.toString())

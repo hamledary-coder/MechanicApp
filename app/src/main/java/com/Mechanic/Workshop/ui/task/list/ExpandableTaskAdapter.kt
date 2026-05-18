@@ -1,7 +1,6 @@
 package com.Mechanic.Workshop.ui.task.list
 
 import TaskModel
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,10 +12,12 @@ import com.Mechanic.Workshop.data.remote.Config
 
 class ExpandableTaskAdapter(
     private val tasks: List<TaskModel>,
+    private val tabType: String,  // "unassigned", "inProgress", "myCartable"
     private val onEditClick: (TaskModel) -> Unit,
     private val onDeleteClick: (TaskModel) -> Unit,
     private val onReferClick: (TaskModel) -> Unit,
-    private val onVolunteerClick: (TaskModel) -> Unit
+    private val onVolunteerClick: (TaskModel) -> Unit,
+    private val onItemClick: ((TaskModel) -> Unit)? = null
 ) : RecyclerView.Adapter<ExpandableTaskAdapter.ViewHolder>() {
 
     private val expandedPosition = mutableSetOf<Int>()
@@ -28,6 +29,7 @@ class ExpandableTaskAdapter(
         val ivExpand: ImageView = itemView.findViewById(R.id.ivExpand)
         val divider: View = itemView.findViewById(R.id.divider)
         val detailLayout: View = itemView.findViewById(R.id.detailLayout)
+        //val headerLayout: View = itemView.findViewById(R.id.headerLayout)
 
         // Detail - فیلدهای اصلی
         val tvDescription: TextView = itemView.findViewById(R.id.tvTaskDescription)
@@ -65,20 +67,85 @@ class ExpandableTaskAdapter(
         holder.tvId.text = "#${task.id}"
         holder.tvTitle.text = task.title
 
-        // تنظیم فلش
         if (isExpanded) {
-            holder.ivExpand.setImageResource(android.R.drawable.arrow_up_float)
+            // حالت باز
+            holder.ivExpand.setImageResource(R.drawable.ic_chevron_up)
             holder.divider.visibility = View.VISIBLE
             holder.detailLayout.visibility = View.VISIBLE
+
+            // آیکون‌های عملیاتی را نمایش بده
+            holder.icEdit.visibility = View.VISIBLE
+            holder.icDelete.visibility = View.VISIBLE
+            holder.icRefer.visibility = View.VISIBLE
+            holder.icVolunteer.visibility = View.VISIBLE
+
+            showAllFields(holder, task)
+
         } else {
-            holder.ivExpand.setImageResource(android.R.drawable.arrow_down_float)
-            holder.divider.visibility = View.GONE
-            holder.detailLayout.visibility = View.GONE
+            // حالت بسته
+            holder.ivExpand.setImageResource(R.drawable.ic_chevron_down)
+            holder.divider.visibility = View.VISIBLE
+
+            // آیکون‌های عملیاتی را مخفی کن
+            holder.icEdit.visibility = View.GONE
+            holder.icDelete.visibility = View.GONE
+            holder.icRefer.visibility = View.GONE
+            holder.icVolunteer.visibility = View.GONE
+
+            when (tabType) {
+                "unassigned" -> {
+                    holder.detailLayout.visibility = View.GONE
+                }
+                "inProgress", "myCartable" -> {
+                    holder.detailLayout.visibility = View.VISIBLE
+                    showCollapsedFields(holder, task)
+                }
+                else -> {
+                    holder.detailLayout.visibility = View.GONE
+                }
+            }
         }
 
-        // توضیحات
-        holder.tvDescription.text = task.description.ifEmpty { "توضیحاتی وارد نشده" }
+        // آیکون‌های عملیاتی (کلیک‌ها)
+        holder.icEdit.setOnClickListener { onEditClick(task) }
+        holder.icDelete.setOnClickListener { onDeleteClick(task) }
+        holder.icRefer.setOnClickListener { onReferClick(task) }
+        holder.icVolunteer.setOnClickListener { onVolunteerClick(task) }
 
+        // ✅ فقط کلیک روی هدر (headerLayout) برای باز و بسته شدن
+        holder.itemView.findViewById<View>(R.id.headerLayout).setOnClickListener {
+            if (isExpanded) {
+                expandedPosition.remove(position)
+            } else {
+                expandedPosition.clear()
+                expandedPosition.add(position)
+            }
+            notifyDataSetChanged()
+        }
+
+        // کلیک روی کل آیتم (فقط برای تب‌های در حال انجام و کارتابل من)
+        if (tabType == "inProgress" || tabType == "myCartable") {
+            holder.itemView.setOnClickListener {
+                onItemClick?.invoke(task)
+            }
+        }
+    }
+
+    /**
+     * نمایش فیلدهای محدود در حالت بسته (برای تب‌های در حال انجام و کارتابل من)
+     */
+    private fun showCollapsedFields(holder: ViewHolder, task: TaskModel) {
+        // مخفی کردن همه فیلدها اول
+        holder.tvDescription.visibility = View.GONE
+        holder.tvAssignees.visibility = View.GONE
+        holder.tvSubUnit.visibility = View.GONE
+        holder.tvRequestDate.visibility = View.GONE
+        holder.tvRequester.visibility = View.GONE
+        holder.tvDeclarationMethod.visibility = View.GONE
+        holder.tvSystemNumber.visibility = View.GONE
+        holder.tvInitialReview.visibility = View.GONE
+
+        // فقط مسئول و واحد و اولویت را نشان بده
         // مسئول
         if (task.responsible.isNotEmpty()) {
             val responsibleName = Config.UserCache.userMap[task.responsible] ?: "کاربر ${task.responsible}"
@@ -93,7 +160,57 @@ class ExpandableTaskAdapter(
             val assigneeNames = task.assignedTo.split(",").map {
                 Config.UserCache.userMap[it.trim()] ?: "کاربر $it"
             }
-            holder.tvAssignees.text = "انجام‌دهندگان: ${assigneeNames.joinToString("، ")}"
+            holder.tvAssignees.text = "گروه: ${assigneeNames.joinToString("، ")}"
+            holder.tvAssignees.visibility = View.VISIBLE
+        } else {
+            holder.tvAssignees.visibility = View.GONE
+        }
+
+        //---واحد---
+        if (task.unit.isNotEmpty() && task.unit != "null") {
+            val unitText = Config.UnitCode.getText(task.unit)
+            if (unitText.isNotEmpty()) {
+                holder.tvUnit.text = "واحد: $unitText"
+                holder.tvUnit.visibility = View.VISIBLE
+            } else {
+                holder.tvUnit.visibility = View.GONE
+            }
+        } else {
+            holder.tvUnit.visibility = View.GONE
+        }
+
+        // فوریت (urgency) - فقط مقادیر غیر از "عادی" را نمایش بده
+        if (task.urgency.isNotEmpty() && task.urgency != "null" && task.urgency != "عادی") {
+            holder.tvPriority.text = "فوریت: ${task.urgency}"
+            holder.tvPriority.visibility = View.VISIBLE
+        } else {
+            holder.tvPriority.visibility = View.GONE
+        }
+    }
+
+    /**
+     * نمایش همه فیلدها در حالت باز (برای همه تب‌ها)
+     */
+    private fun showAllFields(holder: ViewHolder, task: TaskModel) {
+        // توضیحات
+        holder.tvDescription.text = task.description.ifEmpty { "توضیحاتی وارد نشده" }
+        holder.tvDescription.visibility = View.VISIBLE
+
+        // مسئول
+        if (task.responsible.isNotEmpty()) {
+            val responsibleName = Config.UserCache.userMap[task.responsible] ?: "کاربر ${task.responsible}"
+            holder.tvResponsible.text = "مسئول انجام کار: $responsibleName"
+            holder.tvResponsible.visibility = View.VISIBLE
+        } else {
+            holder.tvResponsible.visibility = View.GONE
+        }
+
+        // انجام‌دهندگان
+        if (task.assignedTo.isNotEmpty()) {
+            val assigneeNames = task.assignedTo.split(",").map {
+                Config.UserCache.userMap[it.trim()] ?: "کاربر $it"
+            }
+            holder.tvAssignees.text = "گروه انجام دهنده: ${assigneeNames.joinToString("، ")}"
             holder.tvAssignees.visibility = View.VISIBLE
         } else {
             holder.tvAssignees.visibility = View.GONE
@@ -120,18 +237,18 @@ class ExpandableTaskAdapter(
             holder.tvSubUnit.visibility = View.GONE
         }
 
-        // اولویت/اهمیت
-        if (task.priority.isNotEmpty()) {
-            holder.tvPriority.text = "اهمیت: ${Config.PriorityCode.getText(task.priority)}"
+        // فوریت (urgency) - فقط مقادیر غیر از "عادی" را نمایش بده
+        if (task.urgency.isNotEmpty() && task.urgency != "null" && task.urgency != "عادی") {
+            holder.tvPriority.text = "فوریت: ${task.urgency}"
             holder.tvPriority.visibility = View.VISIBLE
-            setPriorityColor(holder.tvPriority, task.priority)
         } else {
             holder.tvPriority.visibility = View.GONE
         }
 
         // تاریخ اعلام
         if (task.request_date.isNotEmpty()) {
-            holder.tvRequestDate.text = "تاریخ اعلام: ${task.request_date}"
+            val displayDate = task.request_date.replace("-", "/")
+            holder.tvRequestDate.text = "تاریخ اعلام: $displayDate"
             holder.tvRequestDate.visibility = View.VISIBLE
         } else {
             holder.tvRequestDate.visibility = View.GONE
@@ -169,24 +286,7 @@ class ExpandableTaskAdapter(
             holder.tvInitialReview.visibility = View.GONE
         }
 
-        // کلیک روی header برای باز و بسته شدن
-        holder.itemView.setOnClickListener {
-            if (isExpanded) {
-                expandedPosition.remove(position)
-            } else {
-                expandedPosition.clear()
-                expandedPosition.add(position)
-            }
-            notifyDataSetChanged()
-        }
-
-        // آیکون‌های عملیاتی
-        holder.icEdit.setOnClickListener { onEditClick(task) }
-        holder.icDelete.setOnClickListener { onDeleteClick(task) }
-        holder.icRefer.setOnClickListener { onReferClick(task) }
-        holder.icVolunteer.setOnClickListener { onVolunteerClick(task) }
     }
-
     override fun getItemCount() = tasks.size
 
     private fun setPriorityColor(textView: TextView, priorityCode: String) {

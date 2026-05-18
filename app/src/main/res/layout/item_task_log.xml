@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header: خلاصه گزارش + فلش (چپ) + سه نقطه (راست) -->
+        <LinearLayout
+            android:id="@+id/headerLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <!-- سه نقطه در سمت راست (اولین فرزند در RTL) -->
+            <ImageView
+                android:id="@+id/ivMenu"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_more_vert"
+                android:layout_marginEnd="8dp"/>
+
+            <!-- متن خلاصه گزارش (گرفتن فضای باقیمانده) -->
+            <TextView
+                android:id="@+id/tvLogSummary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="گزارش ۱۴۰۴/۰۲/۲۵ - علی رضایی"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:gravity="start"/>
+
+            <!-- فلش اکسپند در سمت چپ (آخرین فرزند) -->
+            <ImageView
+                android:id="@+id/ivExpand"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_chevron_down"
+                android:layout_marginStart="8dp"/>
+
+        </LinearLayout>
+
+        <View
+            android:id="@+id/divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:visibility="gone"/>
+
+        <!-- جزئیات کامل گزارش (در حالت باز) -->
+        <LinearLayout
+            android:id="@+id/detailLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvActionDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="شرح اقدام: ..."
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:id="@+id/tvParts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="قطعات مصرفی: ..."
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tvWorkers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="نیروی انسانی: ..."
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tvTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="زمان: ..."
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tvNewStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="وضعیت جدید: ..."
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tvLogNotes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="توضیحات: ..."
+                android:visibility="gone"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
