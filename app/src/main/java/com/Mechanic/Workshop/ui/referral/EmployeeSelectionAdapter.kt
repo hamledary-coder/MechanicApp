@@ -12,11 +12,17 @@ import com.Mechanic.Workshop.data.model.Employee
 
 class EmployeeSelectionAdapter(
     private var employees: List<Employee>,
+    private val preSelectedIds: Set<String> = emptySet(),
+    private val preSelectedResponsible: String? = null,
     private val onSelectionChanged: (Employee, Boolean, Boolean) -> Unit
 ) : RecyclerView.Adapter<EmployeeSelectionAdapter.ViewHolder>() {
 
-    private val selectedIds = mutableSetOf<String>()
-    private var responsibleId: String? = null
+    // این مقادیر اولیه را جداگانه نگه می‌داریم
+    private val initialSelectedIds = preSelectedIds.toMutableSet()
+    private val initialResponsibleId = preSelectedResponsible
+
+    private val selectedIds = mutableSetOf<String>().apply { addAll(initialSelectedIds) }
+    private var responsibleId: String? = initialResponsibleId
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvName: TextView = view.findViewById(R.id.tvEmployeeName)
@@ -34,11 +40,9 @@ class EmployeeSelectionAdapter(
         val employee = employees[position]
         holder.tvName.text = employee.name
 
-        // جدا کردن listener‌ها قبل از تنظیم وضعیت
         holder.cbSelect.setOnCheckedChangeListener(null)
         holder.rbResponsible.setOnCheckedChangeListener(null)
 
-        // تنظیم وضعیت
         val isSelected = selectedIds.contains(employee.id)
         val isResponsible = responsibleId == employee.id
 
@@ -46,63 +50,39 @@ class EmployeeSelectionAdapter(
         holder.rbResponsible.isChecked = isResponsible
         holder.rbResponsible.isEnabled = isSelected
 
-        // listener چک‌باکس
         holder.cbSelect.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 selectedIds.add(employee.id)
                 onSelectionChanged(employee, true, false)
             } else {
                 selectedIds.remove(employee.id)
-                // اگر مسئول بود، مسئولیتش را حذف کن
-                val wasResponsible = (responsibleId == employee.id)
-
-                if (wasResponsible) {
-                    responsibleId = null
-                    holder.rbResponsible.isChecked = false
-                    onSelectionChanged(employee, false, false)
-                    onSelectionChanged(employee, false, true) // این خط مهمه!
-                } else {
-                    onSelectionChanged(employee, false, false)
-                }
-
                 if (responsibleId == employee.id) {
                     responsibleId = null
                     holder.rbResponsible.isChecked = false
-                    // اطلاع دهید که مسئول حذف شد
                     onSelectionChanged(employee, false, true)
-                    // آپدیت کل لیست برای نمایش درست رادیوباتن‌ها
-                    notifyDataSetChanged()
                 } else {
                     onSelectionChanged(employee, false, false)
                 }
             }
-            // آپدیت وضعیت رادیوباتن
             holder.rbResponsible.isEnabled = isChecked
         }
 
-        // listener رادیوباتن
         holder.rbResponsible.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                // شخص قبلی که مسئول بود را ذخیره کن
                 val prevResponsible = responsibleId
                 responsibleId = employee.id
-
-                // اگر قبلاً کسی مسئول بود، آن را آپدیت کن
-                if (prevResponsible != null) {
-                    notifyDataSetChanged() // کل لیست رو آپدیت کن
+                if (prevResponsible != null && prevResponsible != employee.id) {
+                    notifyDataSetChanged()
                 }
-
-                onSelectionChanged(employee, true, true) // این شخص مسئول شد
+                onSelectionChanged(employee, true, true)
             } else {
-                // فقط اگر این شخص مسئول فعلی است، آن را خاموش کن
                 if (responsibleId == employee.id) {
                     responsibleId = null
-                    onSelectionChanged(employee, true, false) // مسئول حذف شد
+                    onSelectionChanged(employee, true, false)
                 }
             }
         }
 
-        // کلیک روی کل آیتم
         holder.itemView.setOnClickListener {
             holder.cbSelect.isChecked = !holder.cbSelect.isChecked
         }
@@ -112,6 +92,30 @@ class EmployeeSelectionAdapter(
 
     fun updateList(newList: List<Employee>) {
         employees = newList
+
+        // تنظیم مجدد selectedIds بر اساس مقادیر اولیه (نه مقادیر قبلی که ممکن است تغییر کرده باشند)
+        // اگر می‌خواهی تغییرات کاربر حفظ شود، باید از selectedIds فعلی استفاده کنی
+        // اما اینجا فرض می‌کنیم می‌خواهیم مقادیر اولیه (از دیتابیس) حفظ شود
+
+        // گزینه 1: حفظ مقادیر اولیه (از دیتابیس)
+        selectedIds.clear()
+        selectedIds.addAll(initialSelectedIds.filter { id ->
+            employees.any { it.id == id }
+        })
+
+        // گزینه 2: حفظ مقادیر انتخاب شده توسط کاربر در این جلسه (قبل از بارگذاری مجدد)
+        // selectedIds.retainAll(employees.map { it.id })
+
+        if (initialResponsibleId != null && employees.any { it.id == initialResponsibleId }) {
+            responsibleId = initialResponsibleId
+        } else {
+            responsibleId = null
+        }
+
         notifyDataSetChanged()
     }
+
+    fun getSelectedIds(): Set<String> = selectedIds.toSet()
+
+    fun getResponsibleId(): String? = responsibleId
 }

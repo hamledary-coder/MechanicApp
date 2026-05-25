@@ -10,30 +10,65 @@ import TaskModel
 import java.text.SimpleDateFormat
 import java.util.*
 import android.app.TimePickerDialog
+import android.view.View
+import com.Mechanic.Workshop.data.model.TaskLogModel
+import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
 import java.util.Calendar
+import ir.hamsaa.persiandatepicker.PersianDatePickerDialog
+import ir.hamsaa.persiandatepicker.api.PersianPickerDate
+import ir.hamsaa.persiandatepicker.api.PersianPickerListener
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Spinner
+import android.widget.TextView
+import android.widget.Toast
+//import com.github.mohamadamin.jalali.calendar.JalaliCalendar
+
 class AddLogActivity : AppCompatActivity() {
 
     private lateinit var etActionDescription: EditText
     private lateinit var etDate: EditText
     private lateinit var etStartTime: EditText
     private lateinit var etEndTime: EditText
-    private lateinit var etParts: EditText
     private lateinit var tvGroupValue: TextView
     private lateinit var btnEditGroup: Button
     private lateinit var spinnerNewStatus: Spinner
     private lateinit var etNotes: EditText
     private lateinit var btnSubmit: Button
     private lateinit var btnCancel: Button
+    private lateinit var tvDuration: TextView
+
+    // فیلدهای جدید برای کادر شرطی
+    private lateinit var tvConditionalLabel: TextView
+    private lateinit var etConditionalText: EditText
 
     private var task: TaskModel? = null
-    private var currentGroupIds: String = ""  // ذخیره ids گروه انتخاب‌شده
+    private var currentGroupIds: String = ""
+    private lateinit var taskLogRepository: TaskLogRepository
+
+    // برای حالت ویرایش
+    private var isEditMode = false
+    private var editingLogId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_log)
 
+        taskLogRepository = TaskLogRepository(this)
+
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "ثبت گزارش جدید"
+
+        // بررسی حالت ویرایش
+        isEditMode = intent.getBooleanExtra("IS_EDIT_MODE", false)
+        editingLogId = intent.getStringExtra("LOG_ID")
+
+        if (isEditMode) {
+            supportActionBar?.title = "ویرایش گزارش"
+        } else {
+            supportActionBar?.title = "ثبت گزارش جدید"
+        }
 
         // دریافت اطلاعات کار از Intent
         task = TaskModel(
@@ -66,6 +101,12 @@ class AddLogActivity : AppCompatActivity() {
         setupStatusSpinner()
         setupButtons()
         updateGroupDisplay()
+
+        // اگر حالت ویرایش است، اطلاعات گزارش را بارگذاری کن
+        if (isEditMode) {
+            loadLogForEdit()
+            btnSubmit.text = "ویرایش گزارش"
+        }
     }
 
     private fun initViews() {
@@ -73,44 +114,165 @@ class AddLogActivity : AppCompatActivity() {
         etDate = findViewById(R.id.etDate)
         etStartTime = findViewById(R.id.etStartTime)
         etEndTime = findViewById(R.id.etEndTime)
-        etParts = findViewById(R.id.etParts)
         tvGroupValue = findViewById(R.id.tvGroupValue)
         btnEditGroup = findViewById(R.id.btnEditGroup)
         spinnerNewStatus = findViewById(R.id.spinnerNewStatus)
         etNotes = findViewById(R.id.etNotes)
         btnSubmit = findViewById(R.id.btnSubmit)
         btnCancel = findViewById(R.id.btnCancel)
+        tvDuration = findViewById(R.id.tvDuration)
+
+
+        // فیلدهای شرطی
+        tvConditionalLabel = findViewById(R.id.tvConditionalLabel)
+        etConditionalText = findViewById(R.id.etConditionalText)
+
+        // ✅ تنظیم ساعت پیش‌فرض
+        if (!isEditMode) {
+            etStartTime.setText("08:00")
+            etEndTime.setText("12:00")
+            calculateDuration()
+        }
+    }
+
+    private fun loadLogForEdit() {
+        val taskId = task?.id ?: ""
+        val logId = editingLogId ?: ""
+
+        taskLogRepository.getTaskLogs(taskId,
+            onSuccess = { logs ->
+                val log = logs.find { it.id == logId }
+                if (log != null) {
+                    etActionDescription.setText(log.actionDescription)
+                    etDate.setText(log.date)
+                    etStartTime.setText(log.startTime)
+                    etEndTime.setText(log.endTime)
+                    calculateDuration()
+                    currentGroupIds = log.assignedUsers
+                    updateGroupDisplay()
+
+                    // بازیابی متن شرطی از notes (اگر جدا ذخیره نشده باشد)
+                    etConditionalText.setText(log.notes)
+
+                    // تنظیم وضعیت جدید در Spinner
+                    val statusCodes = listOf("22", "3", "41")
+                    val statusIndex = statusCodes.indexOf(log.newStatus)
+                    if (statusIndex >= 0) {
+                        spinnerNewStatus.setSelection(statusIndex)
+                        // فعال کردن کادر شرطی بر اساس وضعیت
+                        updateConditionalFields(statusIndex)
+                    }
+
+                    // تنظیم notes اصلی (اگر قبلاً متنی در آن بود)
+                    etNotes.setText("")
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this, "گزارش یافت نشد", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                }
+            },
+            onError = { message ->
+                runOnUiThread {
+                    Toast.makeText(this, "خطا در بارگذاری: $message", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
+        )
     }
 
     private fun setupDatePicker() {
         etDate.setOnClickListener {
             showDatePicker()
         }
-        // پیش‌فرض: تاریخ امروز
-        val today = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date())
-        etDate.setText(today)
+        if (!isEditMode) {
+            val today = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date())
+            etDate.setText(today)
+        }
     }
 
     private fun showDatePicker() {
-        // TODO: پیاده‌سازی انتخابگر تاریخ شمسی (مثل کد قبلی)
-        Toast.makeText(this, "انتخابگر تاریخ شمسی در حال اضافه شدن", Toast.LENGTH_SHORT).show()
+        val currentDate = etDate.text.toString().split("/")
+        val initYear = if (currentDate.size == 3) currentDate[0].toIntOrNull() ?: 1400 else 1400
+        val initMonth = if (currentDate.size == 3) currentDate[1].toIntOrNull() ?: 1 else 1
+        val initDay = if (currentDate.size == 3) currentDate[2].toIntOrNull() ?: 1 else 1
+
+        PersianDatePickerDialog(this)
+            .setPositiveButtonString("تأیید")
+            .setNegativeButton("انصراف")
+            .setTodayButton("امروز")
+            .setTodayButtonVisible(true)
+            .setInitDate(initYear, initMonth, initDay)
+            .setMinYear(1400)
+            .setMaxYear(PersianDatePickerDialog.THIS_YEAR)
+            .setListener(object : PersianPickerListener {
+                override fun onDateSelected(persianPickerDate: PersianPickerDate) {
+                    val year = persianPickerDate.persianYear
+                    val month = persianPickerDate.persianMonth
+                    val day = persianPickerDate.persianDay
+                    etDate.setText("$year/$month/$day")
+                }
+                override fun onDismissed() { }
+            })
+            .show()
     }
 
     private fun setupTimePickers() {
-        etStartTime.setOnClickListener { showTimePicker(etStartTime) }
-        etEndTime.setOnClickListener { showTimePicker(etEndTime) }
+        etStartTime.setOnClickListener {
+            showTimePicker(etStartTime)
+            calculateDuration()
+        }
+        etEndTime.setOnClickListener {
+            showTimePicker(etEndTime)
+            calculateDuration()
+        }
     }
 
     private fun showTimePicker(editText: EditText) {
         val calendar = Calendar.getInstance()
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
-        val minute = calendar.get(Calendar.MINUTE)
 
-        val timePicker = TimePickerDialog(this, { _, hourOfDay, minuteOfHour ->
-            val time = String.format("%02d:%02d", hourOfDay, minuteOfHour)
-            editText.setText(time)
-        }, hour, minute, true)
-        timePicker.show()
+        val timePickerDialog = TimePickerDialog(
+            this,
+            { _, hourOfDay, minuteOfHour ->
+                // ذخیره ساعت و دقیقه انتخاب شده توسط کاربر
+                val time = String.format("%02d:%02d", hourOfDay, minuteOfHour)
+                editText.setText(time)
+                calculateDuration()
+            },
+            hour,
+            0,  // ← فقط در زمان نمایش، دقیقه را 0 قرار بده
+            true
+        )
+        timePickerDialog.show()
+    }
+
+    // تابع محاسبه مدت زمان
+    private fun calculateDuration() {
+        val start = etStartTime.text.toString()
+        val end = etEndTime.text.toString()
+
+        if (start.isNotEmpty() && end.isNotEmpty()) {
+            try {
+                val startHour = start.split(":")[0].toInt()
+                val startMinute = start.split(":")[1].toInt()
+                val endHour = end.split(":")[0].toInt()
+                val endMinute = end.split(":")[1].toInt()
+
+                var durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute)
+                if (durationMinutes < 0) durationMinutes += 24 * 60 // اگر پایان روز بعد باشد
+
+                val hours = durationMinutes / 60
+                val minutes = durationMinutes % 60
+
+                tvDuration.text = "مدت زمان: $hours ساعت و $minutes دقیقه"
+                tvDuration.visibility = View.VISIBLE
+            } catch (e: Exception) {
+                tvDuration.visibility = View.GONE
+            }
+        } else {
+            tvDuration.visibility = View.GONE
+        }
     }
 
     private fun setupGroupSelection() {
@@ -134,29 +296,60 @@ class AddLogActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateConditionalFields(statusIndex: Int) {
+        when (statusIndex) {
+            0 -> { // ادامه دارد
+                tvConditionalLabel.text = "شرح اقدام بعدی"
+                tvConditionalLabel.visibility = View.VISIBLE
+                etConditionalText.visibility = View.VISIBLE
+                etConditionalText.hint = "برنامه بعدی برای این کار را وارد کنید..."
+            }
+            1 -> { // متوقف
+                tvConditionalLabel.text = "علت توقف"
+                tvConditionalLabel.visibility = View.VISIBLE
+                etConditionalText.visibility = View.VISIBLE
+                etConditionalText.hint = "دلیل توقف کار را وارد کنید..."
+            }
+            2 -> { // اتمام کار
+                tvConditionalLabel.visibility = View.GONE
+                etConditionalText.visibility = View.GONE
+                etConditionalText.setText("")
+            }
+        }
+    }
+
     private fun setupStatusSpinner() {
-        // لیست وضعیت‌های مجاز (بسته به وضعیت فعلی کار)
         val statusList = listOf(
-            "22" to "اقدام شده",
-            "31" to "منتظر تعیین زمان شروع",
-            "32" to "منتظر بهره‌بردار",
-            "33" to "منتظر کالا/قطعه",
-            "34" to "منتظر تست بهره‌بردار",
-            "41" to "اتمام کار",
-            "42" to "منتظر امضا"
+            "22" to "ادامه دارد",
+            "3" to "متوقف",
+            "41" to "اتمام کار"
         )
 
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, statusList.map { it.second })
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerNewStatus.adapter = adapter
 
-        // TODO: اگر کاربر مسئول یا سرشیفت است، وضعیت‌های بیشتری نشان بده
+        // شنونده برای تغییر وضعیت
+        spinnerNewStatus.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                updateConditionalFields(position)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        // مقداردهی اولیه
+        updateConditionalFields(spinnerNewStatus.selectedItemPosition)
     }
 
     private fun setupButtons() {
         btnSubmit.setOnClickListener {
             if (validateForm()) {
-                submitLog()
+                if (isEditMode) {
+                    updateLog()
+                } else {
+                    submitLog()
+                }
             }
         }
 
@@ -174,24 +367,136 @@ class AddLogActivity : AppCompatActivity() {
             Toast.makeText(this, "لطفاً تاریخ را انتخاب کنید", Toast.LENGTH_SHORT).show()
             return false
         }
+
+        // اعتبارسنجی کادر شرطی در صورت نمایش
+        if (etConditionalText.visibility == View.VISIBLE && etConditionalText.text.isNullOrEmpty()) {
+            val message = when (spinnerNewStatus.selectedItemPosition) {
+                0 -> "لطفاً شرح اقدام بعدی را وارد کنید"
+                1 -> "لطفاً علت توقف را وارد کنید"
+                else -> ""
+            }
+            if (message.isNotEmpty()) {
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                return false
+            }
+        }
+
         return true
     }
 
     private fun submitLog() {
         val selectedStatus = when (spinnerNewStatus.selectedItemPosition) {
             0 -> "22"
-            1 -> "31"
-            2 -> "32"
-            3 -> "33"
-            4 -> "34"
-            5 -> "41"
-            6 -> "42"
+            1 -> "3"
+            2 -> "41"
             else -> "22"
         }
 
-        // TODO: ارسال به سرور
-        Toast.makeText(this, "گزارش با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
-        finish()
+        val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+        val currentUserName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+
+        // دریافت متن شرطی (شرح اقدام بعدی یا علت توقف)
+        val conditionalText = if (etConditionalText.visibility == View.VISIBLE) {
+            etConditionalText.text.toString()
+        } else {
+            ""
+        }
+
+        // ترکیب متن شرطی با notes قبلی (اگر وجود داشت)
+        val finalNotes = if (conditionalText.isNotEmpty()) {
+            conditionalText
+        } else {
+            etNotes.text.toString()
+        }
+
+        val newLog = TaskLogModel(
+            id = System.currentTimeMillis().toString(),
+            taskId = task?.id ?: "",
+            userId = currentUserId,
+            userName = currentUserName,
+            date = etDate.text.toString(),
+            startTime = etStartTime.text.toString(),
+            endTime = etEndTime.text.toString(),
+            actionDescription = etActionDescription.text.toString(),
+            assignedUsers = currentGroupIds,
+            newStatus = selectedStatus,
+            attachments = "",
+            notes = finalNotes
+        )
+
+        taskLogRepository.addTaskLog(
+            log = newLog,
+            onSuccess = {
+                runOnUiThread {
+                    Toast.makeText(this, "گزارش با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
+                    setResult(RESULT_OK)
+                    finish()
+                }
+            },
+            onError = { message ->
+                runOnUiThread {
+                    Toast.makeText(this, "خطا در ثبت: $message", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+    private fun updateLog() {
+        val selectedStatus = when (spinnerNewStatus.selectedItemPosition) {
+            0 -> "22"
+            1 -> "3"
+            2 -> "41"
+            else -> "22"
+        }
+
+        val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+        val currentUserName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+
+        // دریافت متن شرطی
+        val conditionalText = if (etConditionalText.visibility == View.VISIBLE) {
+            etConditionalText.text.toString()
+        } else {
+            ""
+        }
+
+        val finalNotes = if (conditionalText.isNotEmpty()) {
+            conditionalText
+        } else {
+            etNotes.text.toString()
+        }
+
+        val updatedLog = TaskLogModel(
+            id = editingLogId ?: "",
+            taskId = task?.id ?: "",
+            userId = currentUserId,
+            userName = currentUserName,
+            date = etDate.text.toString(),
+            startTime = etStartTime.text.toString(),
+            endTime = etEndTime.text.toString(),
+            actionDescription = etActionDescription.text.toString(),
+            assignedUsers = currentGroupIds,
+            newStatus = selectedStatus,
+            attachments = "",
+            notes = finalNotes
+        )
+
+        taskLogRepository.updateTaskLog(
+            log = updatedLog,
+            onSuccess = {
+                runOnUiThread {
+                    Toast.makeText(this, "گزارش با موفقیت ویرایش شد", Toast.LENGTH_SHORT).show()
+                    setResult(RESULT_OK)
+                    finish()
+                }
+            },
+            onError = { message ->
+                runOnUiThread {
+                    Toast.makeText(this, "خطا در ویرایش: $message", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
     }
 
     override fun onSupportNavigateUp(): Boolean {

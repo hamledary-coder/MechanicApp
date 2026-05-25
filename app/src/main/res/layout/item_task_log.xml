@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Header: خلاصه گزارش + فلش (چپ) + سه نقطه (راست) -->
+        <!-- Header: خلاصه گزارش + فلش (راست) + سه نقطه (چپ) - استاندارد RTL -->
         <LinearLayout
             android:id="@+id/headerLayout"
             android:layout_width="match_parent"
@@ -21,9 +21,10 @@
             android:orientation="horizontal"
             android:padding="16dp"
             android:gravity="center_vertical"
+            android:layoutDirection="ltr"
             android:background="?attr/selectableItemBackground">
 
-            <!-- سه نقطه در سمت راست (اولین فرزند در RTL) -->
+            <!-- سه نقطه در سمت چپ -->
             <ImageView
                 android:id="@+id/ivMenu"
                 android:layout_width="24dp"
@@ -42,7 +43,7 @@
                 android:textStyle="bold"
                 android:gravity="start"/>
 
-            <!-- فلش اکسپند در سمت چپ (آخرین فرزند) -->
+            <!-- فلش اکسپند در سمت راست -->
             <ImageView
                 android:id="@+id/ivExpand"
                 android:layout_width="24dp"
@@ -76,17 +77,19 @@
                 android:layout_marginBottom="8dp"/>
 
             <TextView
-                android:id="@+id/tvParts"
+                android:id="@+id/tvDuration"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="قطعات مصرفی: ..."
-                android:layout_marginBottom="4dp"/>
+                android:text="مدت زمان: ..."
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvWorkers"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="نیروی انسانی: ..."
+                android:text="گروه: ..."
                 android:layout_marginBottom="4dp"/>
 
             <TextView
@@ -109,6 +112,36 @@
                 android:layout_height="wrap_content"
                 android:text="توضیحات: ..."
                 android:visibility="gone"/>
+
+            <!-- بخش نظرات -->
+            <TextView
+                android:id="@+id/tvCommentLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="نظرات:"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/commentsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnAddComment"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ثبت نظر"
+                android:backgroundTint="#FF9800"
+                android:textSize="12sp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone" />
 
         </LinearLayout>
 

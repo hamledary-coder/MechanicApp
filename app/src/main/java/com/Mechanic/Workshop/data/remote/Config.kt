@@ -2,7 +2,7 @@ package com.Mechanic.Workshop.data.remote
 
 object Config {
     // آدرس اسکریپت گوگل
-    const val BASE_URL = "http://mechanicbb1.ir/api.php"
+    const val BASE_URL = "https://mechanicbb1.ir/api.php"
 
     object Endpoints {
         const val LOGIN = BASE_URL
@@ -14,7 +14,7 @@ object Config {
     // ============== کدهای وضعیت (دو رقمی) ==============
     object StatusCode {
         // وضعیت‌های اصلی
-        const val UNASSIGNED = "1"      // انتخاب نشده
+        const val UNASSIGNED = "1"      // اقدام نشده
         const val IN_PROGRESS = "2"     // در حال انجام
         const val BLOCKED = "3"         // متوقف
         const val COMPLETED = "4"       // انجام شده
@@ -36,10 +36,10 @@ object Config {
 
         fun getText(code: String): String {
             return when (code) {
-                UNASSIGNED -> "انتخاب نشده"
+                UNASSIGNED -> "اقدام نشده"
                 IN_PROGRESS -> "در حال انجام"
                 GROUP_FORMING -> "بررسی و تشکیل گروه"
-                ACTION_TAKEN -> "اقدام شده"
+                ACTION_TAKEN -> "ادامه دارد"
                 BLOCKED -> "متوقف"
                 WAITING_START -> "منتظر تعیین زمان شروع"
                 WAITING_OPERATOR -> "منتظر بهره‌بردار"

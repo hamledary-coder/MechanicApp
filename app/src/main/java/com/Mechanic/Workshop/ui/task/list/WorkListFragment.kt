@@ -24,6 +24,7 @@ import com.Mechanic.Workshop.ui.task.repository.TaskRepository
 import com.Mechanic.Workshop.ui.task.dialog.InviteDialog
 import com.Mechanic.Workshop.ui.referral.ReferDialog
 import com.Mechanic.Workshop.ui.task.detail.TaskDetailActivity
+import com.Mechanic.Workshop.utils.ActivityLogger
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
@@ -139,7 +140,7 @@ class WorkListFragment : Fragment() {
                             )
 
                             when (status?.trim()) {
-                                "انتخاب نشده" -> {
+                                "اقدام نشده" -> {
                                     if (task.status == "1") {
                                         taskList.add(task)
                                     }
@@ -167,7 +168,7 @@ class WorkListFragment : Fragment() {
 
                             // انتخاب آداپتور مناسب بر اساس وضعیت (با tabType)
                             when (status?.trim()) {
-                                "انتخاب نشده" -> {
+                                "اقدام نشده" -> {
                                     adapter = ExpandableTaskAdapter(
                                         tasks = taskList,
                                         tabType = "unassigned",  // ← اضافه شد
@@ -260,15 +261,16 @@ class WorkListFragment : Fragment() {
         intent.putExtra("CREATOR", task.creator)
         intent.putExtra("DATE", task.createDate)
         intent.putExtra("RESPONSIBLE", task.responsible)
+        intent.putExtra("ASSIGNED_TO", task.assignedTo)           // ← اضافه کن
         intent.putExtra("UNIT", task.unit)
-        intent.putExtra("PRIORITY", task.priority)
-        intent.putExtra("SUB_UNIT", task.sub_unit)
-        intent.putExtra("DECLARATION_METHOD", task.declaration_method)
-        intent.putExtra("REQUESTER", task.requester)
+        intent.putExtra("PRIORITY", task.priority)               // ← اضافه کن
+        intent.putExtra("SUB_UNIT", task.sub_unit)               // ← اضافه کن
+        intent.putExtra("DECLARATION_METHOD", task.declaration_method) // ← اضافه کن
+        intent.putExtra("REQUESTER", task.requester)             // ← اضافه کن
         intent.putExtra("REQUEST_DATE", task.request_date)
-        intent.putExtra("INITIAL_REVIEW", task.initial_review)
-        intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
-        intent.putExtra("URGENCY", task.urgency)
+        intent.putExtra("INITIAL_REVIEW", task.initial_review)   // ← اضافه کن
+        intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number) // ← اضافه کن
+        intent.putExtra("URGENCY", task.urgency)                 // ← اضافه کن (همان فوریت)
         startActivity(intent)
     }
 
@@ -282,6 +284,21 @@ class WorkListFragment : Fragment() {
                     taskId = task.id,
                     onSuccess = {
                         requireActivity().runOnUiThread {
+                            // ثبت لاگ حذف
+                            val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+                            val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+                            val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+
+                            ActivityLogger.log(
+                                context = requireContext(),
+                                userId = userId,
+                                userName = userName,
+                                action = "delete",
+                                targetType = "TASK",
+                                targetId = task.id,
+                                description = "کار شماره ${task.id} با عنوان «${task.title}» توسط کاربر $userName حذف شد"
+                            )
+
                             Toast.makeText(context, "کار حذف شد", Toast.LENGTH_SHORT).show()
                             fetchTasks()
                         }
@@ -299,23 +316,25 @@ class WorkListFragment : Fragment() {
 
     // ارجاع کار (اصلاح شده با runOnUiThread)
     private fun referTask(task: TaskModel) {
-        Log.d("REFER_DEBUG", "1. referTask called for task ${task.id}")
-
         val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
         val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "")
-
-        Log.d("REFER_DEBUG", "2. User role: $userRole")
 
         if (userRole != Config.RoleCode.SUPERVISOR && userRole != Config.RoleCode.MANAGER) {
             Toast.makeText(context, "فقط سرشیفت و مدیر می‌توانند ارجاع دهند", Toast.LENGTH_SHORT).show()
             return
         }
 
-        Log.d("REFER_DEBUG", "3. Creating ReferDialog")
-        val referDialog = ReferDialog(requireContext(), task.id, task.title)
+        // ارسال مقادیر فعلی ارجاع کار به دیالوگ
+        val referDialog = ReferDialog(
+            context = requireContext(),
+            taskId = task.id,
+            taskTitle = task.title,
+            currentAssignees = task.assignedTo,
+            currentResponsible = task.responsible
+        )
 
         referDialog.setOnReferSubmitListener { assigneeIds, referralType, responsibleId ->
-            Log.d("REFER_DEBUG", "4. OnSubmit called: assigneeIds=$assigneeIds, responsibleId=$responsibleId")
+
             taskRepository.assignTask(
                 taskId = task.id,
                 assigneeIds = assigneeIds,
@@ -335,7 +354,7 @@ class WorkListFragment : Fragment() {
             )
         }
         referDialog.show()
-        Log.d("REFER_DEBUG", "5. ReferDialog shown")
+        Log.d("REFER_DEBUG", "ReferDialog shown")
     }
 
     // داوطلب شدن (اصلاح شده با runOnUiThread)

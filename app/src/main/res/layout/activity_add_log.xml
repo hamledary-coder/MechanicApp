@@ -10,7 +10,7 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="#2E7D32"/>
+        android:background="#2E7D32" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -22,27 +22,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- شرح اقدام (اجباری) -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="شرح اقدام انجام شده *"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <EditText
-                android:id="@+id/etActionDescription"
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:hint="مثال: پمپ را باز کردم، واشر تعویض شد..."
-                android:gravity="top"
-                android:inputType="textMultiLine"
-                android:background="@android:drawable/editbox_background"
-                android:padding="12dp"
-                android:layout_marginBottom="16dp" />
-
-            <!-- تاریخ انجام -->
+            <!-- 1. تاریخ انجام -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -62,7 +42,7 @@
                 android:padding="12dp"
                 android:layout_marginBottom="16dp" />
 
-            <!-- زمان شروع و پایان در یک ردیف -->
+            <!-- 2. زمان شروع و پایان -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -123,26 +103,21 @@
                 </LinearLayout>
 
             </LinearLayout>
-
-            <!-- قطعات مصرفی -->
+            <!-- بعد از فیلدهای زمان شروع و پایان -->
             <TextView
+                android:id="@+id/tvDuration"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="قطعات مصرفی"
+                android:text="مدت زمان: 0 ساعت و 0 دقیقه"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
+                android:textColor="#2E7D32"
+                android:padding="8dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone" />
 
-            <EditText
-                android:id="@+id/etParts"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="مثال: واشر 2 عدد، بلبرینگ 1 عدد"
-                android:background="@android:drawable/editbox_background"
-                android:padding="12dp"
-                android:layout_marginBottom="16dp" />
-
-            <!-- گروه انجام‌دهنده + دکمه ویرایش -->
+            <!-- 3. گروه انجام‌دهنده -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -177,7 +152,27 @@
 
             </LinearLayout>
 
-            <!-- وضعیت جدید کار -->
+            <!-- 4. شرح اقدام -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="شرح اقدام *"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <EditText
+                android:id="@+id/etActionDescription"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:hint="متن گزارش..."
+                android:gravity="top"
+                android:inputType="textMultiLine"
+                android:background="@android:drawable/editbox_background"
+                android:padding="12dp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 5. وضعیت جدید کار -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -192,9 +187,33 @@
                 android:layout_height="48dp"
                 android:background="@android:drawable/editbox_background"
                 android:padding="8dp"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginBottom="8dp" />
 
-            <!-- توضیحات تکمیلی -->
+            <!-- کادر شرطی -->
+            <TextView
+                android:id="@+id/tvConditionalLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="شرح اقدام بعدی"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone" />
+
+            <EditText
+                android:id="@+id/etConditionalText"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:hint="..."
+                android:gravity="top"
+                android:inputType="textMultiLine"
+                android:background="@android:drawable/editbox_background"
+                android:padding="12dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone" />
+
+            <!-- 6. توضیحات تکمیلی -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -18,7 +18,13 @@ import okhttp3.Request
 import org.json.JSONArray
 import java.io.IOException
 
-class ReferDialog(private val context: Context, private val taskId: String, private val taskTitle: String) {
+class ReferDialog(
+    private val context: Context,
+    private val taskId: String,
+    private val taskTitle: String,
+    private val currentAssignees: String = "",
+    private val currentResponsible: String = ""
+) {
     private var dialog: AlertDialog? = null
     private lateinit var adapter: EmployeeSelectionAdapter
     private val selectedEmployees = mutableSetOf<Employee>()
@@ -42,7 +48,17 @@ class ReferDialog(private val context: Context, private val taskId: String, priv
         val progressBar = view.findViewById<ProgressBar>(R.id.progressBar)
 
         recyclerView.layoutManager = LinearLayoutManager(context)
-        adapter = EmployeeSelectionAdapter(emptyList()) { employee, isSelected, isResponsible ->
+
+        // آماده‌سازی مقادیر اولیه
+        val preSelectedIds = currentAssignees.split(",").filter { it.isNotEmpty() }.toSet()
+        val preSelectedResponsible = currentResponsible.takeIf { it.isNotEmpty() }
+
+        // ساخت آداپتور
+        adapter = EmployeeSelectionAdapter(
+            employees = emptyList(),
+            preSelectedIds = preSelectedIds,
+            preSelectedResponsible = preSelectedResponsible
+        ) { employee, isSelected, isResponsible ->
             if (isSelected) {
                 selectedEmployees.add(employee)
             } else {
@@ -59,6 +75,21 @@ class ReferDialog(private val context: Context, private val taskId: String, priv
             updateSubmitButton(btnSubmit)
         }
         recyclerView.adapter = adapter
+
+        // بارگذاری لیست کارمندان از سرور
+        loadEmployees(adapter, progressBar) { employeesList ->
+            // بعد از بارگذاری لیست، selectedEmployees را با افرادی که در preSelectedIds هستند پر کن
+            val preSelectedEmployees = employeesList.filter { preSelectedIds.contains(it.id) }
+            selectedEmployees.clear()
+            selectedEmployees.addAll(preSelectedEmployees)
+
+            // مسئول را هم تنظیم کن
+            if (preSelectedResponsible != null) {
+                responsibleEmployee = employeesList.find { it.id == preSelectedResponsible }
+            }
+
+            updateSubmitButton(btnSubmit)
+        }
 
         btnCancel.setOnClickListener { dialog?.dismiss() }
 
@@ -77,7 +108,6 @@ class ReferDialog(private val context: Context, private val taskId: String, priv
 
             onReferSubmit?.invoke(assigneeIds, Config.ReferralType.RESPONSIBLE, responsibleId)
 
-            // بستن دیالوگ بعد از ارجاع
             dialog?.dismiss()
         }
 
@@ -86,12 +116,14 @@ class ReferDialog(private val context: Context, private val taskId: String, priv
             .setCancelable(false)
             .create()
 
-        loadEmployees(adapter, progressBar)
-
         dialog?.show()
     }
 
-    private fun loadEmployees(adapter: EmployeeSelectionAdapter, progressBar: ProgressBar) {
+    private fun loadEmployees(
+        adapter: EmployeeSelectionAdapter,
+        progressBar: ProgressBar,
+        onComplete: (List<Employee>) -> Unit
+    ) {
         progressBar.visibility = View.VISIBLE
 
         val url = "${Config.BASE_URL}?action=getEmployees"
@@ -107,13 +139,12 @@ class ReferDialog(private val context: Context, private val taskId: String, priv
                 (context as? android.app.Activity)?.runOnUiThread {
                     progressBar.visibility = View.GONE
                     Toast.makeText(context, "خطای شبکه: ${e.message}", Toast.LENGTH_SHORT).show()
+                    onComplete(emptyList())
                 }
             }
 
             override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                 val responseBody = response.body?.string() ?: "[]"
-
-                android.util.Log.d("REFER_DIALOG", "Raw response: $responseBody")
 
                 (context as? android.app.Activity)?.runOnUiThread {
                     progressBar.visibility = View.GONE
@@ -139,9 +170,10 @@ class ReferDialog(private val context: Context, private val taskId: String, priv
                         if (employees.isEmpty()) {
                             Toast.makeText(context, "کارمندی برای ارجاع وجود ندارد", Toast.LENGTH_SHORT).show()
                         }
+                        onComplete(employees)
                     } catch (e: Exception) {
-                        android.util.Log.e("REFER_DIALOG", "JSON error: ${e.message}")
                         Toast.makeText(context, "خطا در دریافت لیست: ${e.message}", Toast.LENGTH_SHORT).show()
+                        onComplete(emptyList())
                     }
                 }
             }

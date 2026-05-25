@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"> <uses-permission android:name="android.permission.INTERNET" />
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -10,20 +12,28 @@
         android:theme="@style/Theme.MechanicApp"
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
-        tools:replace="android:label"> <activity
-        android:name=".ui.auth.LoginActivity"
-        android:exported="true">
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
-    </activity>
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:replace="android:label">
+
+        <activity
+            android:name=".ui.auth.LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <activity android:name=".ui.home.HomeActivity" />
         <activity android:name=".ui.cartable.CartableActivity" />
         <activity android:name=".ui.task.create.CreateTaskActivity" />
-        <activity android:name=".ui.task.detail.TaskDetailActivity" />
+
+        <activity
+            android:name=".ui.task.detail.TaskDetailActivity"
+            android:theme="@style/Theme.MechanicApp.NoActionBar" />
+
         <activity android:name=".ui.task.log.AddLogActivity" />
 
     </application>
+
 </manifest>

@@ -1,5 +1,6 @@
 package com.Mechanic.Workshop.ui.task.detail
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -7,10 +8,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.model.TaskLogModel
-import com.Mechanic.Workshop.data.remote.Config
-import TaskModel
-import android.content.Intent
 import com.Mechanic.Workshop.ui.task.log.AddLogActivity
+import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
+import TaskModel
+import android.graphics.Color
+import android.util.Log
 
 class TaskDetailActivity : AppCompatActivity() {
 
@@ -18,26 +20,31 @@ class TaskDetailActivity : AppCompatActivity() {
     private lateinit var adapter: TaskDetailAdapter
     private lateinit var task: TaskModel
     private val logsList = mutableListOf<TaskLogModel>()
+        private lateinit var taskLogRepository: TaskLogRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_task_detail_new)
 
+        val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "جزئیات کار"
+        toolbar.navigationIcon?.setTint(Color.WHITE)
 
         recyclerView = findViewById(R.id.recyclerViewTaskDetail)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        // دریافت اطلاعات کار از Intent
+        taskLogRepository = TaskLogRepository(this)
+
         task = TaskModel(
             id = intent.getStringExtra("TASK_ID") ?: "",
             createDate = intent.getStringExtra("DATE") ?: "",
             title = intent.getStringExtra("TITLE") ?: "",
             description = intent.getStringExtra("DESC") ?: "",
             creator = intent.getStringExtra("CREATOR") ?: "",
-            status = "1",  // مقدار پیش‌فرض، بعداً از سرور می‌آید
-            assignedTo = "",
+            status = "1",
+            assignedTo = intent.getStringExtra("ASSIGNED_TO") ?: "",
             responsible = intent.getStringExtra("RESPONSIBLE") ?: "",
             pendingInvites = "",
             unit = intent.getStringExtra("UNIT") ?: "",
@@ -51,69 +58,79 @@ class TaskDetailActivity : AppCompatActivity() {
             system_request_number = intent.getStringExtra("SYSTEM_REQUEST_NUMBER") ?: ""
         )
 
-        // TODO: دریافت لیست گزارش‌ها از سرور (فعلاً mock)
-        loadMockLogs()
+        loadTaskLogs()
+    }
 
+    private fun loadTaskLogs() {
+        taskLogRepository.getTaskLogs(
+            taskId = task.id,
+            onSuccess = { logs ->
+                runOnUiThread {
+                    logsList.clear()
+                    logsList.addAll(logs)
+                    setupAdapter()
+                }
+            },
+            onError = { message ->
+                runOnUiThread {
+                    Toast.makeText(this, "خطا در دریافت گزارش‌ها: $message", Toast.LENGTH_SHORT).show()
+                    setupAdapter()
+                }
+            }
+        )
+    }
+
+    private fun setupAdapter() {
         adapter = TaskDetailAdapter(
             task = task,
             logs = logsList,
             onEditLogClick = { log -> editLog(log) },
             onDeleteLogClick = { log -> deleteLog(log) },
-            onAddLogClick = { addNewLog() }
+            onAddLogClick = { addNewLog() },
+            onRefreshLogs = { refreshLogs() }
         )
-
         recyclerView.adapter = adapter
     }
 
-    private fun loadMockLogs() {
-        // داده‌های آزمایشی (بعداً با API واقعی جایگزین می‌شود)
-        logsList.add(
-            TaskLogModel(
-                id = "1",
-                taskId = task.id,
-                userId = "101",
-                userName = "علی رضایی",
-                date = "۱۴۰۴/۰۲/۲۵",
-                startTime = "09:00",
-                endTime = "12:00",
-                actionDescription = "بررسی اولیه پمپ و تعویض واشر",
-                consumedParts = "واشر آب‌بندی 2 عدد",
-                assignedUsers = "102,103",
-                newStatus = "22",  // اقدام شده
-                attachments = "",
-                notes = "نیاز به قطعه یدکی دارد",
-                canEditDelete = true
-            )
-        )
-
-        logsList.add(
-            TaskLogModel(
-                id = "2",
-                taskId = task.id,
-                userId = "102",
-                userName = "محمد کریمی",
-                date = "۱۴۰۴/۰۲/۲۶",
-                startTime = "08:30",
-                endTime = "10:00",
-                actionDescription = "تست پمپ پس از تعمیرات",
-                consumedParts = "",
-                assignedUsers = "103",
-                newStatus = "41",  // اتمام کار
-                attachments = "",
-                notes = "عملیات موفقیت‌آمیز بود",
-                canEditDelete = false
-            )
-        )
-    }
-
     private fun editLog(log: TaskLogModel) {
-        Toast.makeText(this, "ویرایش گزارش ${log.id}", Toast.LENGTH_SHORT).show()
-        // TODO: باز کردن صفحه یا دیالوگ ویرایش گزارش
+        val intent = Intent(this, AddLogActivity::class.java).apply {
+            putExtra("IS_EDIT_MODE", true)
+            putExtra("LOG_ID", log.id)
+            putExtra("TASK_ID", log.taskId)
+            putExtra("TITLE", task.title)
+            putExtra("DESC", task.description)
+            putExtra("CREATOR", task.creator)
+            putExtra("DATE", task.createDate)
+            putExtra("RESPONSIBLE", task.responsible)
+            putExtra("ASSIGNED_TO", task.assignedTo)
+            putExtra("UNIT", task.unit)
+            putExtra("PRIORITY", task.priority)
+            putExtra("SUB_UNIT", task.sub_unit)
+            putExtra("DECLARATION_METHOD", task.declaration_method)
+            putExtra("REQUESTER", task.requester)
+            putExtra("REQUEST_DATE", task.request_date)
+            putExtra("INITIAL_REVIEW", task.initial_review)
+            putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
+            putExtra("URGENCY", task.urgency)
+        }
+        startActivity(intent)
     }
 
     private fun deleteLog(log: TaskLogModel) {
-        Toast.makeText(this, "حذف گزارش ${log.id}", Toast.LENGTH_SHORT).show()
-        // TODO: درخواست حذف به سرور و حذف از لیست
+        taskLogRepository.deleteTaskLog(
+            logId = log.id,
+            onSuccess = {
+                runOnUiThread {
+                    Toast.makeText(this, "گزارش حذف شد", Toast.LENGTH_SHORT).show()
+                    loadTaskLogs()
+                }
+            },
+            onError = { message ->
+                runOnUiThread {
+                    Toast.makeText(this, "خطا در حذف: $message", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
     }
 
     private fun addNewLog() {
@@ -135,6 +152,15 @@ class TaskDetailActivity : AppCompatActivity() {
         intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
         intent.putExtra("URGENCY", task.urgency)
         startActivity(intent)
+    }
+
+    private fun refreshLogs() {
+        loadTaskLogs()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadTaskLogs()
     }
 
     override fun onSupportNavigateUp(): Boolean {

@@ -134,7 +134,7 @@ class TaskDetailAdapter(
             '2' -> background.setTint(Color.parseColor("#2196F3"))  // در حال انجام
             '3' -> background.setTint(Color.parseColor("#FF9800"))  // متوقف
             '4' -> background.setTint(Color.parseColor("#4CAF50"))  // انجام شده
-            else -> background.setTint(Color.parseColor("#757575")) // انتخاب نشده
+            else -> background.setTint(Color.parseColor("#757575")) // اقدام نشده
         }
     }
 

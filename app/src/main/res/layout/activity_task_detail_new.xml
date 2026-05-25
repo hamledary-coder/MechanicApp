@@ -4,14 +4,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="#F5F5F5"
+    android:layoutDirection="rtl">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="#2E7D32"
-        app:titleTextColor="#FFFFFF" />
+        android:background="#2343F0"
+        app:titleTextColor="#FFFFFF"
+        app:elevation="0dp" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewTaskDetail"

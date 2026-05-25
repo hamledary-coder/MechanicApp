@@ -10,6 +10,12 @@
         <item name="colorOnSecondary">@color/black</item>
     </style>
 
+    <!-- استایل بدون ActionBar برای TaskDetailActivity -->
+    <style name="Theme.MechanicApp.NoActionBar" parent="Theme.MechanicApp">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
     <!-- استایل تب‌ها -->
     <style name="TabTextStyle">
         <item name="android:textSize">14sp</item>
@@ -24,4 +30,15 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsFloating">true</item>
     </style>
+
+    <style name="ToolbarStyle" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:layoutDirection">rtl</item>
+        <item name="titleTextAppearance">@style/ToolbarTitleStyle</item>
+    </style>
+
+    <style name="ToolbarTitleStyle" parent="TextAppearance.Widget.AppCompat.Toolbar.Title">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+
 </resources>

@@ -1,0 +1,62 @@
+package com.Mechanic.Workshop.utils
+
+import android.content.Context
+import android.util.Log
+import com.Mechanic.Workshop.data.remote.Config
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+
+object ActivityLogger {
+
+    private val client = OkHttpClient()
+
+    fun log(context: Context, userId: String, userName: String, action: String, targetType: String, targetId: String, description: String) {
+        val url = "${Config.BASE_URL}?action=logActivity"
+        Log.d("ActivityLogger", "URL: $url")
+
+        val jsonObject = JSONObject().apply {
+            put("userId", userId)
+            put("userName", userName)
+            //put("action", action)
+            put("targetType", targetType)
+
+            // برای اکشن delete، پارامتر id را بفرست (نه targetId)
+            if (action == "delete") {
+                put("id", targetId)
+            } else {
+                put("targetId", targetId)
+            }
+
+            put("description", description)
+        }
+
+        val jsonString = jsonObject.toString()
+        Log.d("ActivityLogger", "OkHttp Sending: $jsonString")
+
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val body = jsonString.toRequestBody(mediaType)
+
+        val request = okhttp3.Request.Builder()
+            .url(url)
+            .post(body)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: java.io.IOException) {
+                Log.e("ActivityLogger", "OkHttp Error: ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val responseBody = response.body?.string() ?: ""
+                Log.d("ActivityLogger", "OkHttp Response: $responseBody")
+                if (response.isSuccessful) {
+                    Log.d("ActivityLogger", "✅ Log sent successfully")
+                } else {
+                    Log.e("ActivityLogger", "HTTP ${response.code}: $responseBody")
+                }
+            }
+        })
+    }
+}

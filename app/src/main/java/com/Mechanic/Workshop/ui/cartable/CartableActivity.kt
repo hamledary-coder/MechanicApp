@@ -10,6 +10,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.Mechanic.Workshop.ui.task.create.CreateTaskActivity
 import com.Mechanic.Workshop.R
+import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.task.list.WorkListFragment
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.android.material.tabs.TabLayout
@@ -45,16 +46,24 @@ class CartableActivity : AppCompatActivity() {
                     tab.setIcon(R.drawable.ic_progress)
                 }
                 2 -> {
-                    tab.text = "انتخاب نشده"
+                    tab.text = "اقدام نشده"
                     tab.setIcon(R.drawable.ic_pending)
                 }
             }
         }.attach()
 
-        fabAddTask.visibility = View.VISIBLE
-        fabAddTask.setOnClickListener {
-            val intent = Intent(this, CreateTaskActivity::class.java)
-            startActivity(intent)
+        // ========== مدیریت دسترسی ثبت کار جدید بر اساس نقش ==========
+        val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+        val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
+
+        if (userRole == Config.RoleCode.SUPERVISOR || userRole == Config.RoleCode.MANAGER) {
+            fabAddTask.visibility = View.VISIBLE
+            fabAddTask.setOnClickListener {
+                val intent = Intent(this, CreateTaskActivity::class.java)
+                startActivity(intent)
+            }
+        } else {
+            fabAddTask.visibility = View.GONE
         }
     }
 
@@ -72,7 +81,7 @@ class CartableActivity : AppCompatActivity() {
             return when (position) {
                 0 -> WorkListFragment.newInstance("کارتابل من").also { fragments.add(it) }
                 1 -> WorkListFragment.newInstance("در حال انجام").also { fragments.add(it) }
-                else -> WorkListFragment.newInstance("انتخاب نشده").also { fragments.add(it) }
+                else -> WorkListFragment.newInstance("اقدام نشده").also { fragments.add(it) }
             }
         }
 

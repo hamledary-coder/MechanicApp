@@ -1,6 +1,7 @@
 package com.Mechanic.Workshop.ui.task.list
 
 import TaskModel
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,6 +23,9 @@ class ExpandableTaskAdapter(
 
     private val expandedPosition = mutableSetOf<Int>()
 
+    // متغیر برای نقش کاربر (یک بار در ابتدا می‌خوانیم)
+    private lateinit var userRole: String
+
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         // Header
         val tvId: TextView = itemView.findViewById(R.id.tvTaskId)
@@ -29,7 +33,6 @@ class ExpandableTaskAdapter(
         val ivExpand: ImageView = itemView.findViewById(R.id.ivExpand)
         val divider: View = itemView.findViewById(R.id.divider)
         val detailLayout: View = itemView.findViewById(R.id.detailLayout)
-        //val headerLayout: View = itemView.findViewById(R.id.headerLayout)
 
         // Detail - فیلدهای اصلی
         val tvDescription: TextView = itemView.findViewById(R.id.tvTaskDescription)
@@ -56,6 +59,11 @@ class ExpandableTaskAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_task_expandable, parent, false)
+
+        // دریافت نقش کاربر یک بار در زمان ساخت ViewHolder
+        val sharedPref = view.context.getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+        userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
+
         return ViewHolder(view)
     }
 
@@ -66,6 +74,7 @@ class ExpandableTaskAdapter(
         // تنظیم اطلاعات header
         holder.tvId.text = "#${task.id}"
         holder.tvTitle.text = task.title
+        holder.icVolunteer.visibility = View.GONE
 
         if (isExpanded) {
             // حالت باز
@@ -73,11 +82,33 @@ class ExpandableTaskAdapter(
             holder.divider.visibility = View.VISIBLE
             holder.detailLayout.visibility = View.VISIBLE
 
-            // آیکون‌های عملیاتی را نمایش بده
-            holder.icEdit.visibility = View.VISIBLE
-            holder.icDelete.visibility = View.VISIBLE
-            holder.icRefer.visibility = View.VISIBLE
-            holder.icVolunteer.visibility = View.VISIBLE
+            // ========== مدیریت آیکون‌های عملیاتی بر اساس نقش ==========
+            when (userRole) {
+                Config.RoleCode.EMPLOYEE -> {
+                    // کارمند عادی: هیچ آیکونی نمی‌بیند
+                    holder.icEdit.visibility = View.GONE
+                    holder.icDelete.visibility = View.GONE
+                    holder.icRefer.visibility = View.GONE
+                }
+                Config.RoleCode.SUPERVISOR -> {
+                    // سرشیفت: ویرایش و ارجاع دارد، حذف ندارد
+                    holder.icEdit.visibility = View.VISIBLE
+                    holder.icDelete.visibility = View.GONE
+                    holder.icRefer.visibility = View.VISIBLE
+                }
+                Config.RoleCode.MANAGER -> {
+                    // مدیر: همه آیکون‌ها را دارد
+                    holder.icEdit.visibility = View.VISIBLE
+                    holder.icDelete.visibility = View.VISIBLE
+                    holder.icRefer.visibility = View.VISIBLE
+                }
+                else -> {
+                    // حالت پیش‌فرض (امنیتی)
+                    holder.icEdit.visibility = View.GONE
+                    holder.icDelete.visibility = View.GONE
+                    holder.icRefer.visibility = View.GONE
+                }
+            }
 
             showAllFields(holder, task)
 
@@ -86,7 +117,7 @@ class ExpandableTaskAdapter(
             holder.ivExpand.setImageResource(R.drawable.ic_chevron_down)
             holder.divider.visibility = View.VISIBLE
 
-            // آیکون‌های عملیاتی را مخفی کن
+            // آیکون‌های عملیاتی را مخفی کن (در حالت بسته کسی نباید ببیند)
             holder.icEdit.visibility = View.GONE
             holder.icDelete.visibility = View.GONE
             holder.icRefer.visibility = View.GONE
@@ -106,13 +137,13 @@ class ExpandableTaskAdapter(
             }
         }
 
-        // آیکون‌های عملیاتی (کلیک‌ها)
+        // تنظیم کلیک‌ها (حتی اگر آیکون مخفی باشد، کلیک غیرفعال است)
         holder.icEdit.setOnClickListener { onEditClick(task) }
         holder.icDelete.setOnClickListener { onDeleteClick(task) }
         holder.icRefer.setOnClickListener { onReferClick(task) }
         holder.icVolunteer.setOnClickListener { onVolunteerClick(task) }
 
-        // ✅ فقط کلیک روی هدر (headerLayout) برای باز و بسته شدن
+        // فقط کلیک روی هدر (headerLayout) برای باز و بسته شدن
         holder.itemView.findViewById<View>(R.id.headerLayout).setOnClickListener {
             if (isExpanded) {
                 expandedPosition.remove(position)
@@ -145,7 +176,6 @@ class ExpandableTaskAdapter(
         holder.tvSystemNumber.visibility = View.GONE
         holder.tvInitialReview.visibility = View.GONE
 
-        // فقط مسئول و واحد و اولویت را نشان بده
         // مسئول
         if (task.responsible.isNotEmpty()) {
             val responsibleName = Config.UserCache.userMap[task.responsible] ?: "کاربر ${task.responsible}"
@@ -166,7 +196,7 @@ class ExpandableTaskAdapter(
             holder.tvAssignees.visibility = View.GONE
         }
 
-        //---واحد---
+        // واحد
         if (task.unit.isNotEmpty() && task.unit != "null") {
             val unitText = Config.UnitCode.getText(task.unit)
             if (unitText.isNotEmpty()) {
@@ -285,8 +315,8 @@ class ExpandableTaskAdapter(
         } else {
             holder.tvInitialReview.visibility = View.GONE
         }
-
     }
+
     override fun getItemCount() = tasks.size
 
     private fun setPriorityColor(textView: TextView, priorityCode: String) {
