@@ -55,7 +55,8 @@ class TaskDetailActivity : AppCompatActivity() {
             request_date = intent.getStringExtra("REQUEST_DATE") ?: "",
             urgency = intent.getStringExtra("URGENCY") ?: "",
             initial_review = intent.getStringExtra("INITIAL_REVIEW") ?: "",
-            system_request_number = intent.getStringExtra("SYSTEM_REQUEST_NUMBER") ?: ""
+            system_request_number = intent.getStringExtra("SYSTEM_REQUEST_NUMBER") ?: "",
+            referredBy = intent.getStringExtra("REFERRED_BY") ?: ""
         )
 
         loadTaskLogs()

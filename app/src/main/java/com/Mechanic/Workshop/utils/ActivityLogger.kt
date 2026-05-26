@@ -19,7 +19,7 @@ object ActivityLogger {
         val jsonObject = JSONObject().apply {
             put("userId", userId)
             put("userName", userName)
-            put("log_action", action)  // ✅ این حتما الزامی است
+            put("log_action", action)
             put("targetType", targetType)
             put("targetId", targetId)
             put("description", description)

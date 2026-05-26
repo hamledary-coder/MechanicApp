@@ -271,6 +271,7 @@ class WorkListFragment : Fragment() {
         intent.putExtra("INITIAL_REVIEW", task.initial_review)   // ← اضافه کن
         intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number) // ← اضافه کن
         intent.putExtra("URGENCY", task.urgency)                 // ← اضافه کن (همان فوریت)
+        intent.putExtra("REFERRED_BY", task.referredBy)
         startActivity(intent)
     }
 
@@ -324,7 +325,6 @@ class WorkListFragment : Fragment() {
             return
         }
 
-        // ارسال مقادیر فعلی ارجاع کار به دیالوگ
         val referDialog = ReferDialog(
             context = requireContext(),
             taskId = task.id,
@@ -335,13 +335,41 @@ class WorkListFragment : Fragment() {
 
         referDialog.setOnReferSubmitListener { assigneeIds, referralType, responsibleId ->
 
+            // ذخیره مقادیر قبلی برای لاگ
+            val oldAssignees = task.assignedTo
+            val oldResponsible = task.responsible
+
             taskRepository.assignTask(
                 taskId = task.id,
                 assigneeIds = assigneeIds,
                 referralType = referralType,
                 responsibleId = responsibleId,
+                referredBy = sharedPref,
                 onSuccess = {
                     requireActivity().runOnUiThread {
+                        // ثبت لاگ ارجاع
+                        val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+                        val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+
+                        val assigneeNames = assigneeIds.split(",").mapNotNull { Config.UserCache.userMap[it] }.joinToString("، ")
+                        val responsibleName = Config.UserCache.userMap[responsibleId ?: ""] ?: "تعیین نشده"
+                        val oldAssigneeNames = oldAssignees.split(",").mapNotNull { Config.UserCache.userMap[it] }.joinToString("، ")
+                        val oldResponsibleName = Config.UserCache.userMap[oldResponsible] ?: "تعیین نشده"
+
+                        val description = "کار شماره ${task.id} با عنوان «${task.title}» توسط کاربر $userName ارجاع شد.\n" +
+                                "گروه قبلی: [$oldAssigneeNames] - گروه جدید: [$assigneeNames]\n" +
+                                "مسئول قبلی: [$oldResponsibleName] - مسئول جدید: [$responsibleName]"
+
+                        ActivityLogger.log(
+                            context = requireContext(),
+                            userId = userId,
+                            userName = userName,
+                            action = "REFER_TASK",
+                            targetType = "TASK",
+                            targetId = task.id,
+                            description = description
+                        )
+
                         Toast.makeText(context, "ارجاع با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
                         fetchTasks()
                     }

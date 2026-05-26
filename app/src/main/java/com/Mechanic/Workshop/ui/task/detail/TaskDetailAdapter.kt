@@ -103,6 +103,7 @@ class TaskDetailAdapter(
         private val tvSystemNumber: TextView = itemView.findViewById(R.id.tvSystemNumber)
         private val tvInitialReview: TextView = itemView.findViewById(R.id.tvInitialReview)
         private val tvUrgency: TextView = itemView.findViewById(R.id.tvTaskUrgency)
+        private val tvReferredBy: TextView = itemView.findViewById(R.id.tvReferredBy)
 
 
         fun bind(task: TaskModel) {
@@ -183,6 +184,14 @@ class TaskDetailAdapter(
                 tvInitialReview.visibility = View.VISIBLE
             } else {
                 tvInitialReview.visibility = View.GONE
+            }
+
+            if (task.referredBy.isNotEmpty()) {
+                val referredByName = Config.UserCache.userMap[task.referredBy] ?: "کاربر ${task.referredBy}"
+                tvReferredBy.text = "ارجاع‌دهنده: $referredByName"
+                tvReferredBy.visibility = View.VISIBLE
+            } else {
+                tvReferredBy.visibility = View.GONE
             }
         }
     }

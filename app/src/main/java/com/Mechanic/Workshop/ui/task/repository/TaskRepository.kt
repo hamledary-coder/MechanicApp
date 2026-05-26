@@ -37,7 +37,7 @@ class TaskRepository(private val context: Context) {
     }
 
     // ارجاع کار
-    fun assignTask(taskId: String, assigneeIds: String, referralType: String, responsibleId: String?, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun assignTask(taskId: String, assigneeIds: String, referralType: String, responsibleId: String?, referredBy: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val url = Config.Endpoints.TASKS
         val json = JSONObject().apply {
             put("action", "assignTask")
@@ -45,6 +45,7 @@ class TaskRepository(private val context: Context) {
             put("assigneeIds", assigneeIds)
             put("referralType", referralType)
             responsibleId?.let { put("responsibleId", it) }
+            put("referredBy", referredBy)  // ← اضافه شد
         }
 
         val body = RequestBody.create("application/json; charset=utf-8".toMediaType(), json.toString())
