@@ -14,5 +14,8 @@ data class TaskLogModel(
     val attachments: String,
     val notes: String,
     val duration: String = "",
-    val comments: String = "[]"  // ← کاما حذف شد
+    val comments: String = "[]",
+    val heatLevel: Int = 30,
+    val pollutionLevel: Int = 0
+
 )

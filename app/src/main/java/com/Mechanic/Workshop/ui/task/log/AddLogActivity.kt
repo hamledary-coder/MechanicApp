@@ -25,6 +25,12 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import com.Mechanic.Workshop.data.model.Employee
+import com.Mechanic.Workshop.ui.task.dialog.WorkConditionDialog
+import com.Mechanic.Workshop.utils.VolleySingleton
+import com.android.volley.Request
+import com.android.volley.toolbox.JsonObjectRequest
+import org.json.JSONObject
+
 //import com.github.mohamadamin.jalali.calendar.JalaliCalendar
 
 class AddLogActivity : AppCompatActivity() {
@@ -48,6 +54,9 @@ class AddLogActivity : AppCompatActivity() {
     private var task: TaskModel? = null
     private var currentGroupIds: String = ""
     private lateinit var taskLogRepository: TaskLogRepository
+    private lateinit var btnWorkCondition: Button
+    private var currentHeat = 30
+    private var currentPollution = 0
 
     // برای حالت ویرایش
     private var isEditMode = false
@@ -101,6 +110,39 @@ class AddLogActivity : AppCompatActivity() {
         setupGroupSelection()
         setupStatusSpinner()
         setupButtons()
+
+        btnWorkCondition.setOnClickListener {
+            val dialog = WorkConditionDialog(
+                context = this,
+                taskId = task?.id ?: "",
+                onConfirm = { heat, pollution ->
+                    currentHeat = heat
+                    currentPollution = pollution
+                    updateWorkConditionButton()
+                    Toast.makeText(this, "شرایط محیط ذخیره شد: $heat درجه، $pollution ppm", Toast.LENGTH_SHORT).show()
+                },
+                onApplyToAll = { heat, pollution ->
+                    currentHeat = heat
+                    currentPollution = pollution
+                    updateWorkConditionButton()
+
+                    // ارسال به سرور
+                    val json = JSONObject().apply {
+                        put("action", "applyWorkConditionToAll")
+                        put("taskId", task?.id ?: "")
+                        put("heatLevel", heat)
+                        put("pollutionLevel", pollution)
+                    }
+                    val request = JsonObjectRequest(
+                        Request.Method.POST, Config.BASE_URL, json,
+                        { Toast.makeText(this, "اعمال شد", Toast.LENGTH_SHORT).show() },
+                        { Toast.makeText(this, "خطا", Toast.LENGTH_SHORT).show() }
+                    )
+                    VolleySingleton.getInstance(this).add(request)
+                }
+            )
+            dialog.show()
+        }
         updateGroupDisplay()
 
         // اگر حالت ویرایش است، اطلاعات گزارش را بارگذاری کن
@@ -122,6 +164,11 @@ class AddLogActivity : AppCompatActivity() {
         btnSubmit = findViewById(R.id.btnSubmit)
         btnCancel = findViewById(R.id.btnCancel)
         tvDuration = findViewById(R.id.tvDuration)
+        btnWorkCondition = findViewById(R.id.btnWorkCondition)
+
+        btnWorkCondition.visibility = View.VISIBLE
+        updateWorkConditionButton()
+
 
 
         // فیلدهای شرطی
@@ -151,6 +198,9 @@ class AddLogActivity : AppCompatActivity() {
                     calculateDuration()
                     currentGroupIds = log.assignedUsers
                     updateGroupDisplay()
+                    currentHeat = log.heatLevel
+                    currentPollution = log.pollutionLevel
+                    updateWorkConditionButton()
 
                     // بازیابی متن شرطی از notes (اگر جدا ذخیره نشده باشد)
                     etConditionalText.setText(log.notes)
@@ -166,6 +216,7 @@ class AddLogActivity : AppCompatActivity() {
 
                     // تنظیم notes اصلی (اگر قبلاً متنی در آن بود)
                     etNotes.setText("")
+
                 } else {
                     runOnUiThread {
                         Toast.makeText(this, "گزارش یافت نشد", Toast.LENGTH_SHORT).show()
@@ -435,7 +486,9 @@ class AddLogActivity : AppCompatActivity() {
             assignedUsers = currentGroupIds,
             newStatus = selectedStatus,
             attachments = "",
-            notes = finalNotes
+            notes = finalNotes,
+            heatLevel = currentHeat,
+            pollutionLevel = currentPollution
         )
 
         taskLogRepository.addTaskLog(
@@ -492,7 +545,9 @@ class AddLogActivity : AppCompatActivity() {
             assignedUsers = currentGroupIds,
             newStatus = selectedStatus,
             attachments = "",
-            notes = finalNotes
+            notes = finalNotes,
+            heatLevel = currentHeat,
+            pollutionLevel = currentPollution
         )
 
         taskLogRepository.updateTaskLog(
@@ -510,6 +565,10 @@ class AddLogActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+    private fun updateWorkConditionButton() {
+        btnWorkCondition.text = "شرایط محیط کار: $currentHeat / ${currentPollution}"
     }
 
     override fun onSupportNavigateUp(): Boolean {

@@ -233,6 +233,15 @@
                 android:padding="12dp"
                 android:layout_marginBottom="24dp" />
 
+            <Button
+                android:id="@+id/btnWorkCondition"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="شرایط محیط کار"
+                android:backgroundTint="#666664"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone" />
+
             <!-- دکمه‌ها -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -257,7 +266,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="8dp"
                     android:text="انصراف"
-                    android:backgroundTint="#9E9E9E" />
+                    android:backgroundTint="#FF7043" />
 
             </LinearLayout>
 

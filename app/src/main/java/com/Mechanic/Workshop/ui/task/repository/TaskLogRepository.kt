@@ -47,7 +47,9 @@ class TaskLogRepository(private val context: Context) {
                             attachments = "",
                             notes = obj.optString("notes", ""),
                             duration = "",
-                            comments = obj.optString("comments", "[]")  // ← این خط را اضافه کن
+                            comments = obj.optString("comments", "[]"),  // ← این خط را اضافه کن
+                            heatLevel = obj.optInt("heat_level", 30),
+                            pollutionLevel = obj.optInt("pollution_level", 0)
                         ))
                     }
                     onSuccess(logs)
@@ -88,7 +90,9 @@ class TaskLogRepository(private val context: Context) {
             put("actionDescription", log.actionDescription)
             put("assignedUsers", log.assignedUsers)
             put("newStatus", log.newStatus)
-            put("notes", log.notes)  // ← اینجا همه متن شرطی و توضیحات را یکجا بفرست
+            put("notes", log.notes)
+            put("heatLevel",log.heatLevel)
+            put("pollutionLevel", log.pollutionLevel)
         }
 
         val jsonString = jsonObject.toString()
@@ -141,6 +145,8 @@ class TaskLogRepository(private val context: Context) {
             put("assignedUsers", log.assignedUsers)
             put("newStatus", log.newStatus)
             put("notes", log.notes)
+            put("heatLevel",log.heatLevel)
+            put("pollutionLevel", log.pollutionLevel)
         }
 
         val request = JsonObjectRequest(
