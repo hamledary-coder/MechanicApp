@@ -8,7 +8,7 @@
     android:background="@drawable/card_background"
     android:elevation="2dp">
 
-    <!-- Header (قسمت بالایی - همیشه可見) -->
+    <!-- Header: شماره/عنوان + سه نقطه (چپ) + فلش (راست) -->
     <LinearLayout
         android:id="@+id/headerLayout"
         android:layout_width="match_parent"
@@ -16,30 +16,43 @@
         android:orientation="horizontal"
         android:padding="16dp"
         android:gravity="center_vertical"
+        android:layoutDirection="ltr"
         android:background="?attr/selectableItemBackground">
 
+        <!-- سه نقطه در سمت چپ -->
+        <ImageView
+            android:id="@+id/ivMenu"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_more_vert"
+            android:layout_marginEnd="8dp"/>
+
+        <!-- شماره کار -->
         <TextView
             android:id="@+id/tvTaskId"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="شماره: 123"
             android:textStyle="bold"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:layout_marginEnd="16dp"/>
 
+        <!-- عنوان کار (گرفتن فضای باقیمانده) -->
         <TextView
             android:id="@+id/tvTaskTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="3"
+            android:layout_weight="1"
             android:text="عنوان کار"
-            android:textSize="14sp" />
+            android:textSize="14sp"/>
 
+        <!-- فلش اکسپند در سمت راست -->
         <ImageView
             android:id="@+id/ivExpand"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@android:drawable/arrow_down_float" />
+            android:src="@drawable/ic_chevron_down"
+            android:layout_marginStart="8dp"/>
 
     </LinearLayout>
 
@@ -50,7 +63,7 @@
         android:background="#E0E0E0"
         android:visibility="gone" />
 
-    <!-- Detail (قسمت پایینی - فقط در حالت باز دیده می‌شود) -->
+    <!-- detailLayout (قسمت باز شونده) -->
     <LinearLayout
         android:id="@+id/detailLayout"
         android:layout_width="match_parent"
@@ -64,7 +77,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="توضیحات: ..."
-            android:textSize="14sp"
             android:layout_marginBottom="8dp" />
 
         <TextView
@@ -72,20 +84,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="مسئول: ..."
-            android:textSize="14sp"
-            android:layout_marginBottom="4dp"
-            android:visibility="gone" />
+            android:layout_marginBottom="4dp" />
 
         <TextView
             android:id="@+id/tvTaskAssignees"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="انجام‌دهندگان: ..."
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp"
-            android:visibility="gone" />
+            android:layout_marginBottom="8dp" />
 
-        <!-- واحد و زیرمجموعه در یک ردیف -->
+        <!-- واحد و زیرمجموعه و اولویت -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -97,125 +105,60 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="واحد: ..."
-                android:textSize="14sp"
-                android:visibility="gone" />
+                android:text="واحد: ..." />
 
             <TextView
                 android:id="@+id/tvTaskSubUnit"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="زیرمجموعه: ..."
-                android:textSize="14sp"
-                android:visibility="gone" />
+                android:text="زیرمجموعه: ..." />
 
             <TextView
                 android:id="@+id/tvTaskPriority"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="اهمیت: ..."
-                android:textSize="14sp"
-                android:visibility="gone" />
+                android:text="اهمیت: ..." />
         </LinearLayout>
 
-        <!-- تاریخ اعلام -->
         <TextView
             android:id="@+id/tvRequestDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="تاریخ اعلام: ..."
-            android:textSize="14sp"
-            android:layout_marginBottom="4dp"
-            android:visibility="gone" />
+            android:layout_marginBottom="4dp" />
 
-        <!-- صادرکننده درخواست -->
         <TextView
             android:id="@+id/tvRequester"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="صادرکننده: ..."
-            android:textSize="14sp"
-            android:layout_marginBottom="4dp"
-            android:visibility="gone" />
+            android:layout_marginBottom="4dp" />
 
-        <!-- نحوه اعلام -->
         <TextView
             android:id="@+id/tvDeclarationMethod"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="نحوه اعلام: ..."
-            android:textSize="14sp"
-            android:layout_marginBottom="4dp"
-            android:visibility="gone" />
+            android:layout_marginBottom="4dp" />
 
-        <!-- شماره سامانه -->
         <TextView
             android:id="@+id/tvSystemNumber"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="شماره سامانه: ..."
-            android:textSize="14sp"
-            android:layout_marginBottom="4dp"
-            android:visibility="gone" />
+            android:layout_marginBottom="4dp" />
 
-        <!-- بررسی اولیه -->
         <TextView
             android:id="@+id/tvInitialReview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="بررسی اولیه: ..."
-            android:textSize="14sp"
             android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp"
-            android:visibility="gone" />
+            android:layout_marginBottom="8dp" />
 
-        <!-- آیکون‌های عملیاتی -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginTop="8dp">
 
-            <ImageView
-                android:id="@+id/icEdit"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_edit"
-                android:padding="12dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#FF9800" />
-
-            <ImageView
-                android:id="@+id/icDelete"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_delete"
-                android:padding="12dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#F44336" />
-
-            <ImageView
-                android:id="@+id/icRefer"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_refer"
-                android:padding="12dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="@color/blue_500" />
-
-            <ImageView
-                android:id="@+id/icVolunteer"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_volunteer"
-                android:padding="12dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="#4CAF50" />
-
-        </LinearLayout>
 
     </LinearLayout>
 

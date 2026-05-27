@@ -24,6 +24,7 @@ import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import com.Mechanic.Workshop.data.model.Employee
 //import com.github.mohamadamin.jalali.calendar.JalaliCalendar
 
 class AddLogActivity : AppCompatActivity() {
@@ -277,7 +278,19 @@ class AddLogActivity : AppCompatActivity() {
 
     private fun setupGroupSelection() {
         btnEditGroup.setOnClickListener {
-            val dialog = SelectGroupDialog(currentGroupIds) { newGroupIds ->
+            // دریافت لیست گروه اصلی از task.assignedTo (نه currentGroupIds که ممکن است تغییر کرده باشد)
+            val originalGroupIds = task?.assignedTo ?: ""
+            val originalGroupIdList = originalGroupIds.split(",").filter { it.isNotEmpty() }
+
+            // ساخت لیست کارمندانی که در گروه اصلی هستند
+            val groupMembers = originalGroupIdList.mapNotNull { id ->
+                Config.UserCache.userMap[id]?.let { name -> Employee(id, name, "") }
+            }
+
+            val dialog = SelectGroupDialog(
+                currentGroupIds = currentGroupIds,  // ← مقدار فعلی (برای پیش‌فرض تیک‌ها)
+                availableEmployees = groupMembers   // ← همه اعضای گروه اصلی
+            ) { newGroupIds ->
                 currentGroupIds = newGroupIds
                 updateGroupDisplay()
             }

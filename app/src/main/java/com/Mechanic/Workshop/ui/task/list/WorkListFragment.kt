@@ -136,7 +136,8 @@ class WorkListFragment : Fragment() {
                                 request_date = obj.optString("request_date", ""),
                                 urgency = obj.optString("urgency", ""),
                                 initial_review = obj.optString("initial_review", ""),
-                                system_request_number = obj.optString("system_request_number", "")
+                                system_request_number = obj.optString("system_request_number", ""),
+                                referredBy = obj.optString("referred_by", "")
                             )
 
                             when (status?.trim()) {
@@ -250,6 +251,10 @@ class WorkListFragment : Fragment() {
         intent.putExtra("INITIAL_REVIEW", task.initial_review)
         intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
         intent.putExtra("URGENCY", task.urgency)
+        intent.putExtra("OLD_TITLE", task.title)
+        intent.putExtra("OLD_UNIT", task.unit)
+        intent.putExtra("OLD_PRIORITY", task.priority)
+// در صورت نیاز سایر فیلدها
         startActivity(intent)
     }
 
@@ -319,6 +324,8 @@ class WorkListFragment : Fragment() {
     private fun referTask(task: TaskModel) {
         val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
         val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "")
+        //val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID,"")
+        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
 
         if (userRole != Config.RoleCode.SUPERVISOR && userRole != Config.RoleCode.MANAGER) {
             Toast.makeText(context, "فقط سرشیفت و مدیر می‌توانند ارجاع دهند", Toast.LENGTH_SHORT).show()
@@ -344,7 +351,7 @@ class WorkListFragment : Fragment() {
                 assigneeIds = assigneeIds,
                 referralType = referralType,
                 responsibleId = responsibleId,
-                referredBy = sharedPref,
+                referredBy = currentUserId,
                 onSuccess = {
                     requireActivity().runOnUiThread {
                         // ثبت لاگ ارجاع

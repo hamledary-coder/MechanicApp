@@ -4,9 +4,11 @@ import TaskModel
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
+import android.graphics.Color
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.PopupMenu
 import androidx.recyclerview.widget.RecyclerView
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
@@ -31,6 +33,7 @@ class ExpandableTaskAdapter(
         val tvId: TextView = itemView.findViewById(R.id.tvTaskId)
         val tvTitle: TextView = itemView.findViewById(R.id.tvTaskTitle)
         val ivExpand: ImageView = itemView.findViewById(R.id.ivExpand)
+        val ivMenu: ImageView = itemView.findViewById(R.id.ivMenu)
         val divider: View = itemView.findViewById(R.id.divider)
         val detailLayout: View = itemView.findViewById(R.id.detailLayout)
 
@@ -48,12 +51,6 @@ class ExpandableTaskAdapter(
         val tvDeclarationMethod: TextView = itemView.findViewById(R.id.tvDeclarationMethod)
         val tvSystemNumber: TextView = itemView.findViewById(R.id.tvSystemNumber)
         val tvInitialReview: TextView = itemView.findViewById(R.id.tvInitialReview)
-
-        // آیکون‌های عملیاتی
-        val icEdit: ImageView = itemView.findViewById(R.id.icEdit)
-        val icDelete: ImageView = itemView.findViewById(R.id.icDelete)
-        val icRefer: ImageView = itemView.findViewById(R.id.icRefer)
-        val icVolunteer: ImageView = itemView.findViewById(R.id.icVolunteer)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -74,54 +71,17 @@ class ExpandableTaskAdapter(
         // تنظیم اطلاعات header
         holder.tvId.text = "#${task.id}"
         holder.tvTitle.text = task.title
-        holder.icVolunteer.visibility = View.GONE
 
         if (isExpanded) {
             // حالت باز
             holder.ivExpand.setImageResource(R.drawable.ic_chevron_up)
             holder.divider.visibility = View.VISIBLE
             holder.detailLayout.visibility = View.VISIBLE
-
-            // ========== مدیریت آیکون‌های عملیاتی بر اساس نقش ==========
-            when (userRole) {
-                Config.RoleCode.EMPLOYEE -> {
-                    // کارمند عادی: هیچ آیکونی نمی‌بیند
-                    holder.icEdit.visibility = View.GONE
-                    holder.icDelete.visibility = View.GONE
-                    holder.icRefer.visibility = View.GONE
-                }
-                Config.RoleCode.SUPERVISOR -> {
-                    // سرشیفت: ویرایش و ارجاع دارد، حذف ندارد
-                    holder.icEdit.visibility = View.VISIBLE
-                    holder.icDelete.visibility = View.GONE
-                    holder.icRefer.visibility = View.VISIBLE
-                }
-                Config.RoleCode.MANAGER -> {
-                    // مدیر: همه آیکون‌ها را دارد
-                    holder.icEdit.visibility = View.VISIBLE
-                    holder.icDelete.visibility = View.VISIBLE
-                    holder.icRefer.visibility = View.VISIBLE
-                }
-                else -> {
-                    // حالت پیش‌فرض (امنیتی)
-                    holder.icEdit.visibility = View.GONE
-                    holder.icDelete.visibility = View.GONE
-                    holder.icRefer.visibility = View.GONE
-                }
-            }
-
             showAllFields(holder, task)
-
         } else {
             // حالت بسته
             holder.ivExpand.setImageResource(R.drawable.ic_chevron_down)
             holder.divider.visibility = View.VISIBLE
-
-            // آیکون‌های عملیاتی را مخفی کن (در حالت بسته کسی نباید ببیند)
-            holder.icEdit.visibility = View.GONE
-            holder.icDelete.visibility = View.GONE
-            holder.icRefer.visibility = View.GONE
-            holder.icVolunteer.visibility = View.GONE
 
             when (tabType) {
                 "unassigned" -> {
@@ -137,13 +97,49 @@ class ExpandableTaskAdapter(
             }
         }
 
-        // تنظیم کلیک‌ها (حتی اگر آیکون مخفی باشد، کلیک غیرفعال است)
-        holder.icEdit.setOnClickListener { onEditClick(task) }
-        holder.icDelete.setOnClickListener { onDeleteClick(task) }
-        holder.icRefer.setOnClickListener { onReferClick(task) }
-        holder.icVolunteer.setOnClickListener { onVolunteerClick(task) }
+        // ========== سه نقطه (PopupMenu) فقط برای مدیر و سرشیفت ==========
+        if (userRole == Config.RoleCode.MANAGER || userRole == Config.RoleCode.SUPERVISOR) {
+            holder.ivMenu.visibility = View.VISIBLE
+            holder.ivMenu.setOnClickListener { view ->
+                PopupMenu(view.context, view).apply {
+                    // فعال کردن نمایش آیکون‌ها (برای API 28+)
+                    try {
+                        val field = PopupMenu::class.java.getDeclaredField("mPopup")
+                        field.isAccessible = true
+                        val menuPopup = field.get(this)
+                        menuPopup.javaClass.getDeclaredMethod("setForceShowIcon", Boolean::class.java)
+                            .invoke(menuPopup, true)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
 
-        // فقط کلیک روی هدر (headerLayout) برای باز و بسته شدن
+                    // اضافه کردن گزینه‌ها
+                    menu.add(0, 1, 0, "ویرایش").setIcon(R.drawable.ic_edit).also {
+                        it.icon?.setTint(Color.MAGENTA)  // رنگ سفید
+                    }
+                    menu.add(0, 2, 0, "حذف").setIcon(R.drawable.ic_delete).also {
+                        it.icon?.setTint(Color.RED)    // رنگ قرمز
+                    }
+                    menu.add(0, 3, 0, "ارجاع").setIcon(R.drawable.ic_refer).also {
+                        it.icon?.setTint(Color.BLUE)   // رنگ آبی
+                    }
+
+                    setOnMenuItemClickListener { menuItem ->
+                        when (menuItem.itemId) {
+                            1 -> onEditClick(task)
+                            2 -> onDeleteClick(task)
+                            3 -> onReferClick(task)
+                        }
+                        true
+                    }
+                    show()
+                }
+            }
+        } else {
+            holder.ivMenu.visibility = View.GONE
+        }
+
+        // کلیک روی هدر برای باز و بسته شدن
         holder.itemView.findViewById<View>(R.id.headerLayout).setOnClickListener {
             if (isExpanded) {
                 expandedPosition.remove(position)
@@ -318,14 +314,4 @@ class ExpandableTaskAdapter(
     }
 
     override fun getItemCount() = tasks.size
-
-    private fun setPriorityColor(textView: TextView, priorityCode: String) {
-        val color = when (priorityCode) {
-            Config.PriorityCode.EMERGENCY -> "#F44336"
-            Config.PriorityCode.HIGH -> "#FF9800"
-            Config.PriorityCode.LOW -> "#4CAF50"
-            else -> "#9E9E9E"
-        }
-        textView.setTextColor(android.graphics.Color.parseColor(color))
-    }
 }

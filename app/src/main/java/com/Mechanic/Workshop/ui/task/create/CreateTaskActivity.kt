@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.task.repository.TaskRepository
+import com.Mechanic.Workshop.utils.ActivityLogger
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import org.json.JSONObject
@@ -238,7 +239,7 @@ class CreateTaskActivity : AppCompatActivity() {
 
     private fun sendCreateTaskRequest() {
         val url = "${Config.Endpoints.CREATE_TASK}?_=${System.currentTimeMillis()}"
-        //val url = Config.Endpoints.CREATE_TASK
+
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
         val creatorRowId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
 
@@ -294,7 +295,6 @@ class CreateTaskActivity : AppCompatActivity() {
             if (initialReview.isNotEmpty()) put("initial_review", initialReview)
             if (systemRequestNumber.isNotEmpty()) put("system_request_number", systemRequestNumber)
 
-            Log.d("DATE_DEBUG","requestDate: $requestDate")
         }
 
         val body = RequestBody.create("application/json; charset=utf-8".toMediaType(), json.toString())
@@ -318,6 +318,46 @@ class CreateTaskActivity : AppCompatActivity() {
                     if (response.isSuccessful && responseBody.contains("success")) {
                         val msg = if (isEdit) "تغییرات با موفقیت ذخیره شد" else "کار با موفقیت ثبت شد"
                         Toast.makeText(this@CreateTaskActivity, msg, Toast.LENGTH_LONG).show()
+
+                        // ========== ثبت لاگ ویرایش کار (فقط در حالت ویرایش) ==========
+                        if (isEdit) {
+                            val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+                            val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+                            val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+
+                            // دریافت مقادیر قبلی از Intent
+                            val oldTitle = intent.getStringExtra("TITLE") ?: ""
+                            val oldUnit = intent.getStringExtra("UNIT") ?: ""
+                            val oldPriority = intent.getStringExtra("PRIORITY") ?: ""
+                            val oldUrgency = intent.getStringExtra("URGENCY") ?: ""
+
+                            // دریافت مقادیر جدید از فرم
+                            val newTitle = etTitle.text.toString().trim()
+                            val newUnit = spinnerUnit.selectedItem?.toString() ?: ""
+                            val newPriority = ""  // اگر فیلد priority در فرم نداری، خالی بگذار
+                            val newUrgency = when (rgUrgency.checkedRadioButtonId) {
+                                R.id.rbUrgencyVeryHigh -> "خیلی زیاد"
+                                R.id.rbUrgencyHigh -> "زیاد"
+                                else -> "عادی"
+                            }
+
+                            val description = "کار شماره ${taskId ?: ""} توسط کاربر $userName ویرایش شد.\n" +
+                                    "عنوان قبلی: $oldTitle - عنوان جدید: $newTitle\n" +
+                                    "واحد قبلی: $oldUnit - واحد جدید: $newUnit\n" +
+                                    "فوریت قبلی: $oldUrgency - فوریت جدید: $newUrgency"
+
+                            ActivityLogger.log(
+                                context = this@CreateTaskActivity,
+                                userId = userId,
+                                userName = userName,
+                                action = "EDIT_TASK",
+                                targetType = "TASK",
+                                targetId = taskId ?: "",
+                                description = description
+                            )
+                        }
+                        // ========== پایان لاگ ==========
+
                         setResult(RESULT_OK)
                         finish()
                     } else {

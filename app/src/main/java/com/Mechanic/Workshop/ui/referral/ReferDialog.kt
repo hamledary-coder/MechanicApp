@@ -17,6 +17,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import java.io.IOException
+import android.util.Log
 
 class ReferDialog(
     private val context: Context,
@@ -58,20 +59,21 @@ class ReferDialog(
             employees = emptyList(),
             preSelectedIds = preSelectedIds,
             preSelectedResponsible = preSelectedResponsible
-        ) { employee, isSelected, isResponsible ->
+        ) { employee, isSelected, isResponsibleChange ->
             if (isSelected) {
                 selectedEmployees.add(employee)
             } else {
                 selectedEmployees.remove(employee)
+                // اگر کاربری که حذف می‌شود، مسئول فعلی باشد، مسئول را null کن
                 if (responsibleEmployee?.id == employee.id) {
                     responsibleEmployee = null
                 }
             }
-            if (isResponsible) {
+
+            if (isResponsibleChange) {
                 responsibleEmployee = employee
-            } else if (responsibleEmployee?.id == employee.id) {
-                responsibleEmployee = null
             }
+
             updateSubmitButton(btnSubmit)
         }
         recyclerView.adapter = adapter
@@ -88,6 +90,7 @@ class ReferDialog(
                 responsibleEmployee = employeesList.find { it.id == preSelectedResponsible }
             }
 
+            // به‌روزرسانی دکمه پس از مقداردهی
             updateSubmitButton(btnSubmit)
         }
 
@@ -96,6 +99,11 @@ class ReferDialog(
         btnSubmit.setOnClickListener {
             if (selectedEmployees.isEmpty()) {
                 Toast.makeText(context, "حداقل یک نفر را انتخاب کنید", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (responsibleEmployee == null) {
+                Toast.makeText(context, "لطفاً یک مسئول برای کار انتخاب کنید", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -119,11 +127,7 @@ class ReferDialog(
         dialog?.show()
     }
 
-    private fun loadEmployees(
-        adapter: EmployeeSelectionAdapter,
-        progressBar: ProgressBar,
-        onComplete: (List<Employee>) -> Unit
-    ) {
+    private fun loadEmployees(adapter: EmployeeSelectionAdapter, progressBar: ProgressBar, onComplete: (List<Employee>) -> Unit) {
         progressBar.visibility = View.VISIBLE
 
         val url = "${Config.BASE_URL}?action=getEmployees"
@@ -156,7 +160,8 @@ class ReferDialog(
                         for (i in 0 until jsonArray.length()) {
                             val obj = jsonArray.getJSONObject(i)
                             val role = obj.getString("role")
-                            if (role == Config.RoleCode.EMPLOYEE || role == Config.RoleCode.SUPERVISOR) {
+                            // فقط نقش‌های ۲ (مدیر) و ۳ (کارمند) نمایش داده شوند
+                            if (role == Config.RoleCode.EMPLOYEE || role == Config.RoleCode.MANAGER) {
                                 employees.add(
                                     Employee(
                                         id = obj.getString("rowId"),
@@ -182,9 +187,13 @@ class ReferDialog(
 
     private fun updateSubmitButton(btnSubmit: Button) {
         val hasSelection = selectedEmployees.isNotEmpty()
-        btnSubmit.isEnabled = hasSelection
+        val hasResponsible = responsibleEmployee != null
+
+        Log.d("ReferDialog", "hasSelection: $hasSelection, hasResponsible: $hasResponsible")
+
+        btnSubmit.isEnabled = hasSelection && hasResponsible
         btnSubmit.text = when {
-            !btnSubmit.isEnabled -> "ارجاع کار"
+            !btnSubmit.isEnabled -> "ارجاع کار (انتخاب مسئول الزامی است)"
             responsibleEmployee != null -> "ارجاع (مسئول: ${responsibleEmployee?.name})"
             else -> "ارجاع به ${selectedEmployees.size} نفر"
         }

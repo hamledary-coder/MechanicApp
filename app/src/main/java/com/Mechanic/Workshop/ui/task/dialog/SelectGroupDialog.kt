@@ -11,12 +11,14 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.Mechanic.Workshop.R
+import com.Mechanic.Workshop.data.model.Employee
 import com.Mechanic.Workshop.data.remote.Config
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 class SelectGroupDialog(
-    private val currentGroupIds: String,  // ids جدا شده با کاما (مثل "101,103")
-    private val onGroupSelected: (String) -> Unit  // برگرداندن ids جدید
+    private val currentGroupIds: String,
+    private val availableEmployees: List<Employee>,  // ← لیست کارمندانی که در گروه فعلی هستند
+    private val onGroupSelected: (String) -> Unit
 ) : BottomSheetDialogFragment() {
 
     private lateinit var recyclerView: RecyclerView
@@ -45,9 +47,9 @@ class SelectGroupDialog(
             selectedIds.addAll(currentGroupIds.split(",").map { it.trim() })
         }
 
-        // لیست کاربران (از Cache یا درخواست جدید)
-        val users = Config.UserCache.userMap.map { (id, name) ->
-            UserItem(id, name, selectedIds.contains(id))
+        // استفاده از availableEmployees (فقط اعضای گروه فعلی)
+        val users = availableEmployees.map { employee ->
+            UserItem(employee.id, employee.name, selectedIds.contains(employee.id))
         }.sortedBy { it.name }
 
         adapter = GroupSelectionAdapter(users) { userId, isChecked ->

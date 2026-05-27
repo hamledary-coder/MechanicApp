@@ -17,12 +17,8 @@ class EmployeeSelectionAdapter(
     private val onSelectionChanged: (Employee, Boolean, Boolean) -> Unit
 ) : RecyclerView.Adapter<EmployeeSelectionAdapter.ViewHolder>() {
 
-    // این مقادیر اولیه را جداگانه نگه می‌داریم
-    private val initialSelectedIds = preSelectedIds.toMutableSet()
-    private val initialResponsibleId = preSelectedResponsible
-
-    private val selectedIds = mutableSetOf<String>().apply { addAll(initialSelectedIds) }
-    private var responsibleId: String? = initialResponsibleId
+    private val selectedIds = mutableSetOf<String>().apply { addAll(preSelectedIds) }
+    private var responsibleId: String? = preSelectedResponsible
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvName: TextView = view.findViewById(R.id.tvEmployeeName)
@@ -50,23 +46,33 @@ class EmployeeSelectionAdapter(
         holder.rbResponsible.isChecked = isResponsible
         holder.rbResponsible.isEnabled = isSelected
 
+        // چک‌باکس
         holder.cbSelect.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 selectedIds.add(employee.id)
                 onSelectionChanged(employee, true, false)
+                holder.rbResponsible.isEnabled = true
             } else {
                 selectedIds.remove(employee.id)
-                if (responsibleId == employee.id) {
+
+                // بررسی کنیم آیا این کاربر مسئول است یا نه
+                val wasResponsible = (responsibleId == employee.id)
+
+                if (wasResponsible) {
+                    // مسئولیت را لغو کن
                     responsibleId = null
                     holder.rbResponsible.isChecked = false
-                    onSelectionChanged(employee, false, true)
+                    // اطلاع بده که مسئولیت لغو شده (isResponsibleChange = false تا دوباره تنظیم نشود)
+                    onSelectionChanged(employee, false, false)
                 } else {
                     onSelectionChanged(employee, false, false)
                 }
+
+                holder.rbResponsible.isEnabled = false
             }
-            holder.rbResponsible.isEnabled = isChecked
         }
 
+        // رادیو باتن مسئول
         holder.rbResponsible.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 val prevResponsible = responsibleId
@@ -83,6 +89,7 @@ class EmployeeSelectionAdapter(
             }
         }
 
+        // کلیک روی کل آیتم
         holder.itemView.setOnClickListener {
             holder.cbSelect.isChecked = !holder.cbSelect.isChecked
         }
@@ -93,21 +100,12 @@ class EmployeeSelectionAdapter(
     fun updateList(newList: List<Employee>) {
         employees = newList
 
-        // تنظیم مجدد selectedIds بر اساس مقادیر اولیه (نه مقادیر قبلی که ممکن است تغییر کرده باشند)
-        // اگر می‌خواهی تغییرات کاربر حفظ شود، باید از selectedIds فعلی استفاده کنی
-        // اما اینجا فرض می‌کنیم می‌خواهیم مقادیر اولیه (از دیتابیس) حفظ شود
+        // حفظ مقادیر انتخاب شده قبلی (تغییرات کاربر در این جلسه)
+        selectedIds.retainAll(employees.map { it.id })
 
-        // گزینه 1: حفظ مقادیر اولیه (از دیتابیس)
-        selectedIds.clear()
-        selectedIds.addAll(initialSelectedIds.filter { id ->
-            employees.any { it.id == id }
-        })
-
-        // گزینه 2: حفظ مقادیر انتخاب شده توسط کاربر در این جلسه (قبل از بارگذاری مجدد)
-        // selectedIds.retainAll(employees.map { it.id })
-
-        if (initialResponsibleId != null && employees.any { it.id == initialResponsibleId }) {
-            responsibleId = initialResponsibleId
+        // اگر مسئول قبلی هنوز در لیست جدید وجود دارد، آن را حفظ کن
+        if (responsibleId != null && employees.any { it.id == responsibleId }) {
+            // حفظ شود
         } else {
             responsibleId = null
         }
@@ -116,6 +114,5 @@ class EmployeeSelectionAdapter(
     }
 
     fun getSelectedIds(): Set<String> = selectedIds.toSet()
-
     fun getResponsibleId(): String? = responsibleId
 }
