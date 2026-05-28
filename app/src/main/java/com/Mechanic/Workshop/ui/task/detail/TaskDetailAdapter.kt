@@ -33,7 +33,9 @@ class TaskDetailAdapter(
     private val onEditLogClick: (TaskLogModel) -> Unit,
     private val onDeleteLogClick: (TaskLogModel) -> Unit,
     private val onAddLogClick: () -> Unit,
-    private val onRefreshLogs: () -> Unit
+    private val onRefreshLogs: () -> Unit,
+    private val onCompleteTaskClick: () -> Unit,     // ← جدید
+    private val showCompleteButton: Boolean = false  // ← جدید
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -67,7 +69,7 @@ class TaskDetailAdapter(
             else -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_add_log, parent, false)
-                AddLogViewHolder(view, onAddLogClick)
+                AddLogViewHolder(view, onAddLogClick, onCompleteTaskClick, showCompleteButton)
             }
         }
     }
@@ -80,8 +82,7 @@ class TaskDetailAdapter(
                 val sharedPref = holder.itemView.context.getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
                 val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
                 val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
-                holder.bind(log, task, currentUserId, userRole) {
-                    // رفرش صفحه بعد از تغییر نظرات
+                holder.bind(log, task, currentUserId, userRole, onDeleteLogClick) {
                     onRefreshLogs()
                 }
             }
@@ -217,13 +218,15 @@ class TaskDetailAdapter(
         private lateinit var currentTask: TaskModel
         private lateinit var onRefreshCallback: () -> Unit
         private lateinit var currentUserId: String
+        private lateinit var onDeleteCallback: (TaskLogModel) -> Unit
 
 
 
-        fun bind(log: TaskLogModel, task: TaskModel, currentUserId: String, userRole: String, onRefresh: () -> Unit) {
+        fun bind(log: TaskLogModel, task: TaskModel, currentUserId: String, userRole: String, onDelete: (TaskLogModel) -> Unit, onRefresh: () -> Unit) {
             this.currentLog = log
             this.currentTask = task
             this.currentUserId = currentUserId
+            this.onDeleteCallback = onDelete
             this.onRefreshCallback = onRefresh
 
             // ساخت متن هدر با ساعت
@@ -346,7 +349,7 @@ class TaskDetailAdapter(
                             }
                             2 -> {
                                 Toast.makeText(view.context, "حذف گزارش ${log.id}", Toast.LENGTH_SHORT).show()
-                                onRefresh()
+                                onDeleteCallback(log)
                             }
                         }
                         true
@@ -537,9 +540,27 @@ class TaskDetailAdapter(
         }
     }
 
-    class AddLogViewHolder(itemView: View, onClick: () -> Unit) : RecyclerView.ViewHolder(itemView) {
+    class AddLogViewHolder(
+        itemView: View,
+        onAddLogClick: () -> Unit,
+        onCompleteTaskClick: () -> Unit,
+        showCompleteButton: Boolean
+    ) : RecyclerView.ViewHolder(itemView) {
         init {
-            itemView.setOnClickListener { onClick() }
+            val btn = itemView.findViewById<Button>(R.id.btnAddLog)
+            if (showCompleteButton) {
+                btn.text = "اعلام اتمام کار"
+                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor("#9C27B0")  // بنفش
+                )
+                btn.setOnClickListener { onCompleteTaskClick() }
+            } else {
+                btn.text = "ثبت گزارش جدید"
+                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor("#2E7D32")  // سبز
+                )
+                btn.setOnClickListener { onAddLogClick() }
+            }
         }
     }
 }

@@ -13,6 +13,7 @@ import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
 import TaskModel
 import android.graphics.Color
 import android.util.Log
+import com.Mechanic.Workshop.ui.task.complete.CompleteTaskActivity
 
 class TaskDetailActivity : AppCompatActivity() {
 
@@ -82,15 +83,27 @@ class TaskDetailActivity : AppCompatActivity() {
     }
 
     private fun setupAdapter() {
+        // بررسی وجود گزارش با وضعیت اتمام کار
+        val hasCompletionLog = logsList.any { it.newStatus == "41" }
+
         adapter = TaskDetailAdapter(
             task = task,
             logs = logsList,
             onEditLogClick = { log -> editLog(log) },
             onDeleteLogClick = { log -> deleteLog(log) },
             onAddLogClick = { addNewLog() },
-            onRefreshLogs = { refreshLogs() }
+            onRefreshLogs = { refreshLogs() },
+            onCompleteTaskClick = { completeTask() },  // ← جدید
+            showCompleteButton = hasCompletionLog       // ← جدید
         )
         recyclerView.adapter = adapter
+    }
+
+    private fun completeTask() {
+        val intent = Intent(this, CompleteTaskActivity::class.java)
+        intent.putExtra("TASK_ID", task.id)
+        intent.putExtra("TASK_TITLE", task.title)
+        startActivity(intent)
     }
 
     private fun editLog(log: TaskLogModel) {

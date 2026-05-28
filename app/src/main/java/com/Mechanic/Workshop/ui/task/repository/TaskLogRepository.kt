@@ -73,8 +73,6 @@ class TaskLogRepository(private val context: Context) {
         VolleySingleton.getInstance(context).add(request)
     }
 
-
-    // 2. ثبت گزارش جدید (OkHttp)
     // 2. ثبت گزارش جدید (OkHttp)
     fun addTaskLog(log: TaskLogModel, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val client = OkHttpClient()
@@ -169,10 +167,12 @@ class TaskLogRepository(private val context: Context) {
     // 4. حذف گزارش (Volley)
     fun deleteTaskLog(logId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val url = "${Config.BASE_URL}?action=deleteTaskLog&logId=$logId"
+        Log.d("DELETE", "URL: $url")  // ← لاگ
 
         val request = JsonObjectRequest(
             Request.Method.GET, url, null,
             { response ->
+                Log.d("DELETE", "Response: $response")  // ← لاگ
                 if (response.optString("status") == "success") {
                     onSuccess()
                 } else {
@@ -180,10 +180,10 @@ class TaskLogRepository(private val context: Context) {
                 }
             },
             { error ->
+                Log.e("DELETE", "Error: ${error.message}")  // ← لاگ
                 onError("خطا در اتصال به شبکه: ${error.message}")
             }
         )
-
         VolleySingleton.getInstance(context).add(request)
     }
 }

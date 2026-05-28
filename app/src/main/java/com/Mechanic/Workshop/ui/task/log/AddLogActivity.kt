@@ -10,6 +10,7 @@ import TaskModel
 import java.text.SimpleDateFormat
 import java.util.*
 import android.app.TimePickerDialog
+import android.content.Intent
 import android.view.View
 import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
@@ -25,6 +26,7 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import com.Mechanic.Workshop.data.model.Employee
+import com.Mechanic.Workshop.ui.task.detail.TaskDetailActivity
 import com.Mechanic.Workshop.ui.task.dialog.WorkConditionDialog
 import com.Mechanic.Workshop.utils.VolleySingleton
 import com.android.volley.Request
@@ -460,14 +462,12 @@ class AddLogActivity : AppCompatActivity() {
         val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
         val currentUserName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
 
-        // دریافت متن شرطی (شرح اقدام بعدی یا علت توقف)
         val conditionalText = if (etConditionalText.visibility == View.VISIBLE) {
             etConditionalText.text.toString()
         } else {
             ""
         }
 
-        // ترکیب متن شرطی با notes قبلی (اگر وجود داشت)
         val finalNotes = if (conditionalText.isNotEmpty()) {
             conditionalText
         } else {
@@ -497,6 +497,28 @@ class AddLogActivity : AppCompatActivity() {
                 runOnUiThread {
                     Toast.makeText(this, "گزارش با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
                     setResult(RESULT_OK)
+
+                    if (selectedStatus == "41") {
+                        // باز کردن صفحه جزئیات کار
+                        val intent = Intent(this, TaskDetailActivity::class.java)
+                        intent.putExtra("TASK_ID", task?.id ?: "")
+                        intent.putExtra("TITLE", task?.title ?: "")
+                        intent.putExtra("DESC", task?.description ?: "")
+                        intent.putExtra("CREATOR", task?.creator ?: "")
+                        intent.putExtra("DATE", task?.createDate ?: "")
+                        intent.putExtra("RESPONSIBLE", task?.responsible ?: "")
+                        intent.putExtra("ASSIGNED_TO", task?.assignedTo ?: "")
+                        intent.putExtra("UNIT", task?.unit ?: "")
+                        intent.putExtra("PRIORITY", task?.priority ?: "")
+                        intent.putExtra("SUB_UNIT", task?.sub_unit ?: "")
+                        intent.putExtra("DECLARATION_METHOD", task?.declaration_method ?: "")
+                        intent.putExtra("REQUESTER", task?.requester ?: "")
+                        intent.putExtra("REQUEST_DATE", task?.request_date ?: "")
+                        intent.putExtra("INITIAL_REVIEW", task?.initial_review ?: "")
+                        intent.putExtra("SYSTEM_REQUEST_NUMBER", task?.system_request_number ?: "")
+                        intent.putExtra("URGENCY", task?.urgency ?: "")
+                        startActivity(intent)
+                    }
                     finish()
                 }
             },
