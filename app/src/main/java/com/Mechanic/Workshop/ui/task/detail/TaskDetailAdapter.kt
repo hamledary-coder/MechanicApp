@@ -20,7 +20,13 @@ import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.task.log.AddLogActivity
 import com.Mechanic.Workshop.utils.VolleySingleton
 import TaskModel
+import android.content.res.Resources
+import android.graphics.drawable.GradientDrawable
 import android.util.Log
+import android.view.Gravity
+import android.graphics.Color
+import com.Mechanic.Workshop.utils.SeenItem
+import com.Mechanic.Workshop.utils.SeenManager
 import org.json.JSONArray
 import org.json.JSONObject
 import com.android.volley.Request
@@ -237,13 +243,16 @@ class TaskDetailAdapter(
             }
             tvLogSummary.text = "گزارش ${log.date} - ${log.userName}$timeRange"
 
+            // ✅ نمایش تیک‌های رنگی کاربرانی که دیده‌اند
+            displaySeenBy(log.seenBy)
+
             tvActionDescription.text = "شرح اقدام: ${log.actionDescription}"
 
             if (log.assignedUsers.isNotEmpty()) {
                 val workerNames = log.assignedUsers.split(",").mapNotNull {
                     Config.UserCache.userMap[it.trim()]
                 }
-                tvWorkers.text = "نیروی انسانی: ${workerNames.joinToString("، ")}"
+                tvWorkers.text = "گروه انجام دهتده: ${workerNames.joinToString("، ")}"
                 tvWorkers.visibility = View.VISIBLE
             } else {
                 tvWorkers.visibility = View.GONE
@@ -364,6 +373,15 @@ class TaskDetailAdapter(
                 ivExpand.setImageResource(R.drawable.ic_chevron_up)
                 divider.visibility = View.VISIBLE
                 detailLayout.visibility = View.VISIBLE
+
+                // ✅ ثبت دیده شدن گزارش
+                if (::currentUserId.isInitialized && currentUserId.isNotEmpty()) {
+                    SeenManager.markAsSeen(
+                        itemView.context,
+                        currentUserId,
+                        listOf(SeenItem("TASK_LOG", currentLog.id))
+                    )
+                }
             } else {
                 ivExpand.setImageResource(R.drawable.ic_chevron_down)
                 divider.visibility = View.GONE
@@ -538,6 +556,57 @@ class TaskDetailAdapter(
             )
             VolleySingleton.getInstance(itemView.context).add(request)
         }
+
+        private fun displaySeenBy(seenBy: List<String>) {
+            val container = itemView.findViewById<LinearLayout>(R.id.seenByContainer)
+            container.removeAllViews()
+
+            val maxDisplay = 6
+            val toShow = seenBy.take(maxDisplay)
+            val remaining = seenBy.size - maxDisplay
+
+            toShow.forEach { userId ->
+                val userColor = getColorForUserId(userId)
+
+                val tickView = ImageView(itemView.context).apply {
+                    setImageResource(R.drawable.ic_check)
+                    setColorFilter(userColor, android.graphics.PorterDuff.Mode.SRC_IN)
+                    layoutParams = LinearLayout.LayoutParams(12.dpToPx(), 12.dpToPx()).apply {
+                        marginEnd = 0  // ← فاصله صفر
+                    }
+                }
+                container.addView(tickView)
+            }
+
+            if (remaining > 0) {
+                val moreView = TextView(itemView.context).apply {
+                    text = "+$remaining"
+                    textSize = 10f
+                    setTextColor(Color.BLACK)
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        gravity = Gravity.CENTER_VERTICAL
+                        marginEnd = 2.dpToPx()
+                    }
+                }
+                container.addView(moreView)
+            }
+        }
+
+        private fun getColorForUserId(userId: String): Int {
+            val colors = listOf(
+                "#E91E63", "#9C27B0", "#673AB7", "#3F51B5",
+                "#2196F3", "#03A9F4", "#00BCD4", "#009688",
+                "#4CAF50", "#8BC34A", "#CDDC39", "#FFEB3B",
+                "#FFC107", "#FF9800", "#FF5722", "#795548"
+            )
+            val index = userId.hashCode().mod(colors.size)
+            return Color.parseColor(colors[index])
+        }
+
+        fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
     }
 
     class AddLogViewHolder(
@@ -551,13 +620,13 @@ class TaskDetailAdapter(
             if (showCompleteButton) {
                 btn.text = "اعلام اتمام کار"
                 btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor("#9C27B0")  // بنفش
+                    android.graphics.Color.parseColor("#2E7D32")  // سبز
                 )
                 btn.setOnClickListener { onCompleteTaskClick() }
             } else {
                 btn.text = "ثبت گزارش جدید"
                 btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor("#2E7D32")  // سبز
+                    android.graphics.Color.parseColor("#9C27B0")  // بنفش
                 )
                 btn.setOnClickListener { onAddLogClick() }
             }

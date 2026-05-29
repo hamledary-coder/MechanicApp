@@ -113,6 +113,14 @@
                 android:text="توضیحات: ..."
                 android:visibility="gone"/>
 
+            <!-- ✅ تیک‌های رنگی -->
+            <LinearLayout
+                android:id="@+id/seenByContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginStart="8dp" />
+
             <!-- بخش نظرات -->
             <TextView
                 android:id="@+id/tvCommentLabel"

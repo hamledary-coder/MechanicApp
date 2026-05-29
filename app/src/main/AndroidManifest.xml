@@ -27,6 +27,9 @@
         <activity android:name=".ui.home.HomeActivity" />
         <activity android:name=".ui.cartable.CartableActivity" />
         <activity android:name=".ui.task.create.CreateTaskActivity" />
+        <activity
+            android:name=".ui.task.complete.CompleteTaskActivity"
+            android:theme="@style/Theme.MechanicApp.NoActionBar" />
 
         <activity
             android:name=".ui.task.detail.TaskDetailActivity"

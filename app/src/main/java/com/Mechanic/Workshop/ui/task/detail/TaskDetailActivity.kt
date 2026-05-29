@@ -13,7 +13,10 @@ import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
 import TaskModel
 import android.graphics.Color
 import android.util.Log
+import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.task.complete.CompleteTaskActivity
+import com.Mechanic.Workshop.utils.SeenItem
+import com.Mechanic.Workshop.utils.SeenManager
 
 class TaskDetailActivity : AppCompatActivity() {
 
@@ -59,6 +62,10 @@ class TaskDetailActivity : AppCompatActivity() {
             system_request_number = intent.getStringExtra("SYSTEM_REQUEST_NUMBER") ?: "",
             referredBy = intent.getStringExtra("REFERRED_BY") ?: ""
         )
+        val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+
+        SeenManager.markAsSeen(this, currentUserId, listOf(SeenItem("TASK", task.id)))
 
         loadTaskLogs()
     }

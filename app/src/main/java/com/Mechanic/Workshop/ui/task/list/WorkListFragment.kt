@@ -88,10 +88,13 @@ class WorkListFragment : Fragment() {
 
     private fun fetchTasks() {
         val timestamp = System.currentTimeMillis()
-        val url = "${Config.Endpoints.TASKS}&_=$timestamp"
+        val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+
+        // ✅ اضافه کردن userId به URL برای دریافت seen_by
+        val url = "${Config.Endpoints.TASKS}&_=$timestamp&userId=$currentUserId"
         hideEmptyState()
 
-        val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
         val currentUserRowId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
 
         if (!swipeRefreshLayout.isRefreshing) {
@@ -117,6 +120,22 @@ class WorkListFragment : Fragment() {
 
                         for (i in 0 until jsonArray.length()) {
                             val obj = jsonArray.getJSONObject(i)
+
+                            // ✅ خواندن seen_by از JSON
+                            // ✅ parse seen_by (که به صورت رشته می‌آید)
+                            val seenBy = mutableListOf<String>()
+                            val seenByStr = obj.optString("seen_by", "[]")
+                            if (seenByStr.isNotEmpty() && seenByStr != "[]") {
+                                try {
+                                    val seenByArray = JSONArray(seenByStr)
+                                    for (j in 0 until seenByArray.length()) {
+                                        seenBy.add(seenByArray.getString(j))
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("WorkList", "Error parsing seen_by: ${e.message}")
+                                }
+                            }
+
                             val task = TaskModel(
                                 id = obj.getString("id"),
                                 createDate = obj.getString("createDate"),
@@ -129,7 +148,6 @@ class WorkListFragment : Fragment() {
                                 pendingInvites = obj.optString("pendingInvites", ""),
                                 unit = obj.optString("unit", ""),
                                 priority = obj.optString("priority", ""),
-                                // فیلدهای جدید
                                 sub_unit = obj.optString("sub_unit", ""),
                                 declaration_method = obj.optString("declaration_method", ""),
                                 requester = obj.optString("requester", ""),
@@ -137,7 +155,8 @@ class WorkListFragment : Fragment() {
                                 urgency = obj.optString("urgency", ""),
                                 initial_review = obj.optString("initial_review", ""),
                                 system_request_number = obj.optString("system_request_number", ""),
-                                referredBy = obj.optString("referred_by", "")
+                                referredBy = obj.optString("referred_by", ""),
+                                seenBy = seenBy  // ← اضافه شد
                             )
 
                             when (status?.trim()) {
@@ -167,12 +186,11 @@ class WorkListFragment : Fragment() {
                         } else {
                             hideEmptyState()
 
-                            // انتخاب آداپتور مناسب بر اساس وضعیت (با tabType)
                             when (status?.trim()) {
                                 "اقدام نشده" -> {
                                     adapter = ExpandableTaskAdapter(
                                         tasks = taskList,
-                                        tabType = "unassigned",  // ← اضافه شد
+                                        tabType = "unassigned",
                                         onEditClick = { task -> openEditTask(task) },
                                         onDeleteClick = { task -> deleteTask(task) },
                                         onReferClick = { task -> referTask(task) },
@@ -182,7 +200,7 @@ class WorkListFragment : Fragment() {
                                 "در حال انجام" -> {
                                     adapter = ExpandableTaskAdapter(
                                         tasks = taskList,
-                                        tabType = "inProgress",  // ← اضافه شد
+                                        tabType = "inProgress",
                                         onEditClick = { task -> openEditTask(task) },
                                         onDeleteClick = { task -> deleteTask(task) },
                                         onReferClick = { task -> referTask(task) },
@@ -193,7 +211,7 @@ class WorkListFragment : Fragment() {
                                 "کارتابل من" -> {
                                     adapter = ExpandableTaskAdapter(
                                         tasks = taskList,
-                                        tabType = "myCartable",  // ← اضافه شد
+                                        tabType = "myCartable",
                                         onEditClick = { task -> openEditTask(task) },
                                         onDeleteClick = { task -> deleteTask(task) },
                                         onReferClick = { task -> referTask(task) },
@@ -202,7 +220,6 @@ class WorkListFragment : Fragment() {
                                     )
                                 }
                                 else -> {
-                                    // حالت پیش‌فرض (نباید اجرا شود)
                                     adapter = ExpandableTaskAdapter(
                                         tasks = taskList,
                                         tabType = "unassigned",

@@ -20,19 +20,34 @@ class TaskLogRepository(private val context: Context) {
     // 1. دریافت لیست گزارش‌ها (Volley)
     fun getTaskLogs(taskId: String, onSuccess: (List<TaskLogModel>) -> Unit, onError: (String) -> Unit) {
         val timestamp = System.currentTimeMillis()
-        val url = "${Config.BASE_URL}?action=getTaskLogs&taskId=$taskId&_=$timestamp"
-
-        Log.d("TaskLogRepo", "getTaskLogs URL: $url")
+        val sharedPref = context.getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+        val url = "${Config.BASE_URL}?action=getTaskLogs&taskId=$taskId&_=$timestamp&userId=$currentUserId"
 
         val request = object : StringRequest(
             Request.Method.GET, url,
             { response ->
-                Log.d("TaskLogRepo", "getTaskLogs raw response: $response")
+
                 try {
                     val jsonArray = JSONArray(response)
                     val logs = mutableListOf<TaskLogModel>()
                     for (i in 0 until jsonArray.length()) {
                         val obj = jsonArray.getJSONObject(i)
+
+                        // ✅ خواندن seen_by
+                        val seenBy = mutableListOf<String>()
+                        val seenByStr = obj.optString("seen_by", "[]")
+                        if (seenByStr.isNotEmpty() && seenByStr != "[]") {
+                            try {
+                                val seenByArray = JSONArray(seenByStr)
+                                for (j in 0 until seenByArray.length()) {
+                                    seenBy.add(seenByArray.getString(j))
+                                }
+                            } catch (e: Exception) {
+                                Log.e("TaskLogRepo", "Error parsing seen_by: ${e.message}")
+                            }
+                        }
+
                         logs.add(TaskLogModel(
                             id = obj.getString("id"),
                             taskId = obj.getString("task_id"),
@@ -47,9 +62,11 @@ class TaskLogRepository(private val context: Context) {
                             attachments = "",
                             notes = obj.optString("notes", ""),
                             duration = "",
-                            comments = obj.optString("comments", "[]"),  // ← این خط را اضافه کن
+                            comments = obj.optString("comments", "[]"),
                             heatLevel = obj.optInt("heat_level", 30),
-                            pollutionLevel = obj.optInt("pollution_level", 0)
+                            pollutionLevel = obj.optInt("pollution_level", 0),
+                            workType = obj.optString("work_type", "fixed_equipment"),
+                            seenBy = seenBy  // ← اضافه شد
                         ))
                     }
                     onSuccess(logs)
@@ -91,6 +108,7 @@ class TaskLogRepository(private val context: Context) {
             put("notes", log.notes)
             put("heatLevel",log.heatLevel)
             put("pollutionLevel", log.pollutionLevel)
+            put("workType", log.workType)
         }
 
         val jsonString = jsonObject.toString()
@@ -145,6 +163,7 @@ class TaskLogRepository(private val context: Context) {
             put("notes", log.notes)
             put("heatLevel",log.heatLevel)
             put("pollutionLevel", log.pollutionLevel)
+            put("workType", log.workType)
         }
 
         val request = JsonObjectRequest(

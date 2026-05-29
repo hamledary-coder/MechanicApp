@@ -115,6 +115,24 @@
         android:textColor="#2E7D32"
         android:layout_marginBottom="16dp" />
 
+    <!-- نوع کار -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="نوع کار"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <Spinner
+        android:id="@+id/spinnerWorkType"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@android:drawable/editbox_background"
+        android:padding="8dp"
+        android:layout_marginBottom="16dp" />
+
     <!-- دکمه اعمال به همه -->
     <Button
         android:id="@+id/btnApplyToAll"

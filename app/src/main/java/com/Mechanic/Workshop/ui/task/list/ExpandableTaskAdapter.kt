@@ -2,11 +2,15 @@ package com.Mechanic.Workshop.ui.task.list
 
 import TaskModel
 import android.content.Context
+import android.content.res.Resources
 import android.view.LayoutInflater
 import android.view.View
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.PopupMenu
 import androidx.recyclerview.widget.RecyclerView
@@ -51,6 +55,8 @@ class ExpandableTaskAdapter(
         val tvDeclarationMethod: TextView = itemView.findViewById(R.id.tvDeclarationMethod)
         val tvSystemNumber: TextView = itemView.findViewById(R.id.tvSystemNumber)
         val tvInitialReview: TextView = itemView.findViewById(R.id.tvInitialReview)
+
+        val seenByContainer: LinearLayout = itemView.findViewById(R.id.seenByContainer)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -71,6 +77,7 @@ class ExpandableTaskAdapter(
         // تنظیم اطلاعات header
         holder.tvId.text = "#${task.id}"
         holder.tvTitle.text = task.title
+        displaySeenBy(task.seenBy, holder.seenByContainer)
 
         if (isExpanded) {
             // حالت باز
@@ -312,6 +319,57 @@ class ExpandableTaskAdapter(
             holder.tvInitialReview.visibility = View.GONE
         }
     }
+
+    private fun displaySeenBy(seenBy: List<String>, container: LinearLayout) {
+        container.removeAllViews()
+
+        val maxDisplay = 6
+        val toShow = seenBy.take(maxDisplay)
+        val remaining = seenBy.size - maxDisplay
+
+        toShow.forEach { userId ->
+            val userColor = getColorForUserId(userId)
+
+            val tickView = ImageView(container.context).apply {
+                setImageResource(R.drawable.ic_check)
+                setColorFilter(userColor, android.graphics.PorterDuff.Mode.SRC_IN)
+                layoutParams = LinearLayout.LayoutParams(12.dpToPx(), 12.dpToPx()).apply {
+                    marginEnd = 0  // ← فاصله صفر
+                }
+            }
+            container.addView(tickView)
+        }
+
+        if (remaining > 0) {
+            val moreView = TextView(container.context).apply {
+                text = "+$remaining"
+                textSize = 10f
+                gravity = Gravity.CENTER
+                setTextColor(Color.BLACK)
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginEnd = 2.dpToPx()
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+            }
+            container.addView(moreView)
+        }
+    }
+
+    private fun getColorForUserId(userId: String): Int {
+        val colors = listOf(
+            "#E91E63", "#9C27B0", "#673AB7", "#3F51B5",
+            "#2196F3", "#03A9F4", "#00BCD4", "#009688",
+            "#4CAF50", "#8BC34A", "#CDDC39", "#FFEB3B",
+            "#FFC107", "#FF9800", "#FF5722", "#795548"
+        )
+        val index = userId.hashCode().mod(colors.size)
+        return Color.parseColor(colors[index])
+    }
+
+    fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
 
     override fun getItemCount() = tasks.size
 }

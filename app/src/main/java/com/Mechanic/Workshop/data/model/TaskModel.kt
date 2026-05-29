@@ -18,5 +18,6 @@ data class TaskModel(
     val urgency: String = "",
     val initial_review: String = "",
     val system_request_number: String = "",
-    val referredBy: String = ""
+    val referredBy: String = "",
+    val seenBy: List<String> = emptyList()
 )
