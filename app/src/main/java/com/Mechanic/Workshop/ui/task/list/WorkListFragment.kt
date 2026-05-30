@@ -90,8 +90,9 @@ class WorkListFragment : Fragment() {
         val timestamp = System.currentTimeMillis()
         val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
         val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+        val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
 
-        // ✅ اضافه کردن userId به URL برای دریافت seen_by
+        // اضافه کردن userId به URL برای دریافت has_unseen_report
         val url = "${Config.Endpoints.TASKS}&_=$timestamp&userId=$currentUserId"
         hideEmptyState()
 
@@ -121,8 +122,7 @@ class WorkListFragment : Fragment() {
                         for (i in 0 until jsonArray.length()) {
                             val obj = jsonArray.getJSONObject(i)
 
-                            // ✅ خواندن seen_by از JSON
-                            // ✅ parse seen_by (که به صورت رشته می‌آید)
+                            // Parse seen_by (برای کارها)
                             val seenBy = mutableListOf<String>()
                             val seenByStr = obj.optString("seen_by", "[]")
                             if (seenByStr.isNotEmpty() && seenByStr != "[]") {
@@ -135,6 +135,8 @@ class WorkListFragment : Fragment() {
                                     Log.e("WorkList", "Error parsing seen_by: ${e.message}")
                                 }
                             }
+
+                            val hasUnseenReport = obj.optInt("has_unseen_report", 0) == 1
 
                             val task = TaskModel(
                                 id = obj.getString("id"),
@@ -156,7 +158,8 @@ class WorkListFragment : Fragment() {
                                 initial_review = obj.optString("initial_review", ""),
                                 system_request_number = obj.optString("system_request_number", ""),
                                 referredBy = obj.optString("referred_by", ""),
-                                seenBy = seenBy  // ← اضافه شد
+                                seenBy = seenBy,
+                                hasUnseenReport = hasUnseenReport
                             )
 
                             when (status?.trim()) {
@@ -171,10 +174,31 @@ class WorkListFragment : Fragment() {
                                     }
                                 }
                                 "کارتابل من" -> {
-                                    if (task.assignedTo.isNotEmpty()) {
-                                        val assignedList = task.assignedTo.split(",").map { it.trim() }
-                                        if (assignedList.contains(currentUserRowId)) {
-                                            taskList.add(task)
+                                    when (userRole) {
+                                        Config.RoleCode.EMPLOYEE -> {
+                                            if (task.assignedTo.split(",").contains(currentUserRowId)) {
+                                                taskList.add(task)
+                                            }
+                                        }
+                                        Config.RoleCode.SUPERVISOR -> {
+                                            val isInvolved = task.assignedTo.split(",").contains(currentUserRowId) ||
+                                                    task.responsible == currentUserRowId
+                                            val isCompleted = task.status == "41"
+                                            val hasNewReport = task.hasUnseenReport
+                                            if (isInvolved || isCompleted || hasNewReport) {
+                                                taskList.add(task)
+                                            }
+                                        }
+                                        Config.RoleCode.MANAGER -> {
+                                            if (task.hasUnseenReport) {
+                                                taskList.add(task)
+                                            }
+                                        }
+                                        else -> {
+                                            // حالت پیش‌فرض (امنیتی)
+                                            if (task.assignedTo.split(",").contains(currentUserRowId)) {
+                                                taskList.add(task)
+                                            }
                                         }
                                     }
                                 }

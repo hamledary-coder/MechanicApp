@@ -77,6 +77,22 @@ class ExpandableTaskAdapter(
         // تنظیم اطلاعات header
         holder.tvId.text = "#${task.id}"
         holder.tvTitle.text = task.title
+
+        // تنظیم رنگ پس‌زمینه کارت برای کارهای دارای گزارش جدید (فقط برای مدیر و سرشیفت)
+        if (task.hasUnseenReport && (userRole == Config.RoleCode.SUPERVISOR || userRole == Config.RoleCode.MANAGER)) {
+            holder.itemView.setBackgroundColor(Color.parseColor("#E3F2FD"))  // آبی خیلی کمرنگ
+        } else {
+            holder.itemView.setBackgroundColor(Color.WHITE)
+        }
+        // تنظیم رنگ پس‌زمینه کارت برای کارهای درخواست اتمام (وضعیت 41)
+        if (task.status == "41" && userRole == Config.RoleCode.SUPERVISOR) {
+            holder.itemView.setBackgroundColor(Color.parseColor("#FFEBEE"))  // قرمز خیلی کمرنگ
+        } else if (task.hasUnseenReport && (userRole == Config.RoleCode.SUPERVISOR || userRole == Config.RoleCode.MANAGER)) {
+            holder.itemView.setBackgroundColor(Color.parseColor("#E3F2FD"))  // آبی کمرنگ
+        } else {
+            holder.itemView.setBackgroundColor(Color.WHITE)
+        }
+
         displaySeenBy(task.seenBy, holder.seenByContainer)
 
         if (isExpanded) {

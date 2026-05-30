@@ -25,6 +25,7 @@ import android.graphics.drawable.GradientDrawable
 import android.util.Log
 import android.view.Gravity
 import android.graphics.Color
+import androidx.cardview.widget.CardView
 import com.Mechanic.Workshop.utils.SeenItem
 import com.Mechanic.Workshop.utils.SeenManager
 import org.json.JSONArray
@@ -219,6 +220,7 @@ class TaskDetailAdapter(
         private val tvCommentLabel: TextView = itemView.findViewById(R.id.tvCommentLabel)
         private val commentsContainer: LinearLayout = itemView.findViewById(R.id.commentsContainer)
         private val btnAddComment: Button = itemView.findViewById(R.id.btnAddComment)
+        private val cardLog: CardView = itemView.findViewById(R.id.cardLog)
         private var isExpanded = false
         private lateinit var currentLog: TaskLogModel
         private lateinit var currentTask: TaskModel
@@ -228,12 +230,29 @@ class TaskDetailAdapter(
 
 
 
+
         fun bind(log: TaskLogModel, task: TaskModel, currentUserId: String, userRole: String, onDelete: (TaskLogModel) -> Unit, onRefresh: () -> Unit) {
             this.currentLog = log
             this.currentTask = task
             this.currentUserId = currentUserId
             this.onDeleteCallback = onDelete
             this.onRefreshCallback = onRefresh
+
+            /// رنگ کردن هدر گزارش برای گزارش‌های جدید (فقط مدیر و سرشیفت)
+            val isSeenByCurrentUser = currentLog.seenBy.contains(currentUserId)
+            if (!isSeenByCurrentUser && (userRole == Config.RoleCode.SUPERVISOR || userRole == Config.RoleCode.MANAGER)) {
+                cardLog.setCardBackgroundColor(Color.parseColor("#E3F2FD"))  // آبی کمرنگ
+                isExpanded = true  // اکسپند خودکار
+            } else {
+                cardLog.setCardBackgroundColor(Color.WHITE)
+                isExpanded = false
+            }
+
+            if (log.actionDescription.contains("برگشت داده شد")) {
+                tvActionDescription.setTextColor(Color.RED)
+            } else {
+                tvActionDescription.setTextColor(Color.BLACK)
+            }
 
             // ساخت متن هدر با ساعت
             val timeRange = if (log.startTime.isNotEmpty() || log.endTime.isNotEmpty()) {

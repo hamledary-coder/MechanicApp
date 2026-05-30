@@ -56,8 +56,8 @@ object Config {
 
     // ============== کدهای نقش ==============
     object RoleCode {
-        const val SUPERVISOR = "1"  // سرشیفت - ارجاع کار
-        const val MANAGER = "2"     // مدیر - نظارت
+        const val MANAGER = "1"     // مدیر - نظارت
+        const val SUPERVISOR = "2"  // سرشیفت - ارجاع کار
         const val EMPLOYEE = "3"    // کارمند - انجام کار
 
         fun getText(code: String): String = when (code) {

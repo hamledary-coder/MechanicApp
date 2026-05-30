@@ -158,25 +158,42 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="2"
+                android:orientation="vertical"
                 android:layout_marginBottom="32dp">
 
-                <Button
-                    android:id="@+id/btnConfirmComplete"
-                    android:layout_width="0dp"
+                <!-- ردیف اول: تأیید و برگشت به مسئول کار -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:text="تأیید اتمام کار"
-                    android:backgroundTint="#2E7D32" />
+                    android:orientation="horizontal"
+                    android:weightSum="2"
+                    android:layout_marginBottom="8dp">
 
+                    <Button
+                        android:id="@+id/btnConfirmComplete"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="تأیید اتمام کار"
+                        android:backgroundTint="#2E7D32" />
+
+                    <Button
+                        android:id="@+id/btnReject"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="برگشت به مسئول کار"
+                        android:backgroundTint="#F44336" />
+
+                </LinearLayout>
+
+                <!-- ردیف دوم: بازگشت -->
                 <Button
                     android:id="@+id/btnBack"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
                     android:text="بازگشت"
                     android:backgroundTint="#9E9E9E" />
 

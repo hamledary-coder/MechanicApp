@@ -19,5 +19,6 @@ data class TaskModel(
     val initial_review: String = "",
     val system_request_number: String = "",
     val referredBy: String = "",
-    val seenBy: List<String> = emptyList()
+    val seenBy: List<String> = emptyList(),
+    val hasUnseenReport: Boolean = false
 )

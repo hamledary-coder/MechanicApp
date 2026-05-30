@@ -1,6 +1,7 @@
 package com.Mechanic.Workshop.ui.task.detail
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -11,12 +12,10 @@ import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.ui.task.log.AddLogActivity
 import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
 import TaskModel
-import android.graphics.Color
-import android.util.Log
-import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.task.complete.CompleteTaskActivity
 import com.Mechanic.Workshop.utils.SeenItem
 import com.Mechanic.Workshop.utils.SeenManager
+import com.Mechanic.Workshop.data.remote.Config
 
 class TaskDetailActivity : AppCompatActivity() {
 
@@ -24,23 +23,48 @@ class TaskDetailActivity : AppCompatActivity() {
     private lateinit var adapter: TaskDetailAdapter
     private lateinit var task: TaskModel
     private val logsList = mutableListOf<TaskLogModel>()
-        private lateinit var taskLogRepository: TaskLogRepository
+    private lateinit var taskLogRepository: TaskLogRepository
+
+    companion object {
+        private const val STATUS_COMPLETED = "41"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_task_detail_new)
+        setupToolbar()
+        initViews()
+        loadTaskData()
+        markTaskAsSeen()
+    }
 
+    override fun onResume() {
+        super.onResume()
+        loadTaskLogs()
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressed()
+        return true
+    }
+
+    private fun setupToolbar() {
         val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "جزئیات کار"
+        supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            title = "جزئیات کار"
+        }
         toolbar.navigationIcon?.setTint(Color.WHITE)
+    }
 
+    private fun initViews() {
         recyclerView = findViewById(R.id.recyclerViewTaskDetail)
         recyclerView.layoutManager = LinearLayoutManager(this)
-
         taskLogRepository = TaskLogRepository(this)
+    }
 
+    private fun loadTaskData() {
         task = TaskModel(
             id = intent.getStringExtra("TASK_ID") ?: "",
             createDate = intent.getStringExtra("DATE") ?: "",
@@ -62,12 +86,12 @@ class TaskDetailActivity : AppCompatActivity() {
             system_request_number = intent.getStringExtra("SYSTEM_REQUEST_NUMBER") ?: "",
             referredBy = intent.getStringExtra("REFERRED_BY") ?: ""
         )
+    }
+
+    private fun markTaskAsSeen() {
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
         val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
-
         SeenManager.markAsSeen(this, currentUserId, listOf(SeenItem("TASK", task.id)))
-
-        loadTaskLogs()
     }
 
     private fun loadTaskLogs() {
@@ -75,9 +99,7 @@ class TaskDetailActivity : AppCompatActivity() {
             taskId = task.id,
             onSuccess = { logs ->
                 runOnUiThread {
-                    logsList.clear()
-                    logsList.addAll(logs)
-                    setupAdapter()
+                    updateLogsAndStatus(logs)
                 }
             },
             onError = { message ->
@@ -89,35 +111,49 @@ class TaskDetailActivity : AppCompatActivity() {
         )
     }
 
+    private fun updateLogsAndStatus(logs: List<TaskLogModel>) {
+        logsList.clear()
+        logsList.addAll(logs)
+
+        if (logs.isNotEmpty()) {
+            task = task.copy(status = logs.last().newStatus)
+        }
+
+        setupAdapter()
+    }
+
     private fun setupAdapter() {
-        // بررسی وجود گزارش با وضعیت اتمام کار
-        val hasCompletionLog = logsList.any { it.newStatus == "41" }
+        val hasCompletionLog = logsList.any { it.newStatus == STATUS_COMPLETED }
 
         adapter = TaskDetailAdapter(
             task = task,
             logs = logsList,
-            onEditLogClick = { log -> editLog(log) },
+            onEditLogClick = { log -> startAddLogActivity(log) },
             onDeleteLogClick = { log -> deleteLog(log) },
-            onAddLogClick = { addNewLog() },
-            onRefreshLogs = { refreshLogs() },
-            onCompleteTaskClick = { completeTask() },  // ← جدید
-            showCompleteButton = hasCompletionLog       // ← جدید
+            onAddLogClick = { startAddLogActivity() },
+            onRefreshLogs = { loadTaskLogs() },
+            onCompleteTaskClick = { completeTask() },
+            showCompleteButton = hasCompletionLog
         )
         recyclerView.adapter = adapter
     }
 
-    private fun completeTask() {
-        val intent = Intent(this, CompleteTaskActivity::class.java)
-        intent.putExtra("TASK_ID", task.id)
-        intent.putExtra("TASK_TITLE", task.title)
+    private fun startAddLogActivity(log: TaskLogModel? = null) {
+        val intent = Intent(this, AddLogActivity::class.java).apply {
+            if (log != null) {
+                putExtra("IS_EDIT_MODE", true)
+                putExtra("LOG_ID", log.id)
+                putExtra("TASK_ID", log.taskId)
+            } else {
+                putExtra("TASK_ID", task.id)
+            }
+            putTaskExtras(this)
+        }
         startActivity(intent)
     }
 
-    private fun editLog(log: TaskLogModel) {
-        val intent = Intent(this, AddLogActivity::class.java).apply {
-            putExtra("IS_EDIT_MODE", true)
-            putExtra("LOG_ID", log.id)
-            putExtra("TASK_ID", log.taskId)
+    private fun putTaskExtras(intent: Intent) {
+        intent.apply {
             putExtra("TITLE", task.title)
             putExtra("DESC", task.description)
             putExtra("CREATOR", task.creator)
@@ -134,7 +170,6 @@ class TaskDetailActivity : AppCompatActivity() {
             putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
             putExtra("URGENCY", task.urgency)
         }
-        startActivity(intent)
     }
 
     private fun deleteLog(log: TaskLogModel) {
@@ -154,38 +189,11 @@ class TaskDetailActivity : AppCompatActivity() {
         )
     }
 
-    private fun addNewLog() {
-        val intent = Intent(this, AddLogActivity::class.java)
-        intent.putExtra("TASK_ID", task.id)
-        intent.putExtra("TITLE", task.title)
-        intent.putExtra("DESC", task.description)
-        intent.putExtra("CREATOR", task.creator)
-        intent.putExtra("DATE", task.createDate)
-        intent.putExtra("RESPONSIBLE", task.responsible)
-        intent.putExtra("ASSIGNED_TO", task.assignedTo)
-        intent.putExtra("UNIT", task.unit)
-        intent.putExtra("PRIORITY", task.priority)
-        intent.putExtra("SUB_UNIT", task.sub_unit)
-        intent.putExtra("DECLARATION_METHOD", task.declaration_method)
-        intent.putExtra("REQUESTER", task.requester)
-        intent.putExtra("REQUEST_DATE", task.request_date)
-        intent.putExtra("INITIAL_REVIEW", task.initial_review)
-        intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
-        intent.putExtra("URGENCY", task.urgency)
-        startActivity(intent)
-    }
-
-    private fun refreshLogs() {
-        loadTaskLogs()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        loadTaskLogs()
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        onBackPressed()
-        return true
+    private fun completeTask() {
+        startActivity(Intent(this, CompleteTaskActivity::class.java).apply {
+            putExtra("TASK_ID", task.id)
+            putExtra("TASK_TITLE", task.title)
+            putExtra("CURRENT_STATUS", task.status)
+        })
     }
 }
