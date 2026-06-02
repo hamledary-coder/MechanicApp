@@ -6,7 +6,6 @@ import android.content.res.Resources
 import android.view.LayoutInflater
 import android.view.View
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -120,8 +119,8 @@ class ExpandableTaskAdapter(
             }
         }
 
-        // ========== سه نقطه (PopupMenu) فقط برای مدیر و سرشیفت ==========
-        if (userRole == Config.RoleCode.MANAGER || userRole == Config.RoleCode.SUPERVISOR) {
+        // ========== سه نقطه (PopupMenu) فقط برای مدیر و سرشیفت و غیر بایگانی ==========
+        if (tabType != "archived" && (userRole == Config.RoleCode.MANAGER || userRole == Config.RoleCode.SUPERVISOR)) {
             holder.ivMenu.visibility = View.VISIBLE
             holder.ivMenu.setOnClickListener { view ->
                 PopupMenu(view.context, view).apply {
@@ -138,13 +137,13 @@ class ExpandableTaskAdapter(
 
                     // اضافه کردن گزینه‌ها
                     menu.add(0, 1, 0, "ویرایش").setIcon(R.drawable.ic_edit).also {
-                        it.icon?.setTint(Color.MAGENTA)  // رنگ سفید
+                        it.icon?.setTint(Color.MAGENTA)
                     }
                     menu.add(0, 2, 0, "حذف").setIcon(R.drawable.ic_delete).also {
-                        it.icon?.setTint(Color.RED)    // رنگ قرمز
+                        it.icon?.setTint(Color.RED)
                     }
                     menu.add(0, 3, 0, "ارجاع").setIcon(R.drawable.ic_refer).also {
-                        it.icon?.setTint(Color.BLUE)   // رنگ آبی
+                        it.icon?.setTint(Color.BLUE)
                     }
 
                     setOnMenuItemClickListener { menuItem ->
@@ -174,7 +173,7 @@ class ExpandableTaskAdapter(
         }
 
         // کلیک روی کل آیتم (فقط برای تب‌های در حال انجام و کارتابل من)
-        if (tabType == "inProgress" || tabType == "myCartable") {
+        if (tabType == "inProgress" || tabType == "myCartable" || tabType == "archived"){
             holder.itemView.setOnClickListener {
                 onItemClick?.invoke(task)
             }

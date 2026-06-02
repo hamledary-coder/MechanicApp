@@ -298,9 +298,9 @@ class CompleteTaskActivity : AppCompatActivity() {
     }
 
     private fun completeTaskAsSupervisor() {
-        updateTaskStatus(taskId, STATUS_COMPLETED) { success ->
+        updateTaskStatus(taskId, "5") { success ->
             if (success) {
-                Toast.makeText(this, "کار با موفقیت به اتمام رسید", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "کار تأیید و بایگانی شد", Toast.LENGTH_SHORT).show()
                 finish()
             } else {
                 Toast.makeText(this, "خطا در اتمام کار", Toast.LENGTH_SHORT).show()

@@ -13,42 +13,19 @@ object Config {
 
     // ============== کدهای وضعیت (دو رقمی) ==============
     object StatusCode {
-        // وضعیت‌های اصلی
-        const val UNASSIGNED = "1"      // اقدام نشده
-        const val IN_PROGRESS = "2"     // در حال انجام
-        const val BLOCKED = "3"         // متوقف
-        const val COMPLETED = "4"       // انجام شده
-
-        // زیروضعیت‌های در حال انجام
-        const val GROUP_FORMING = "21"  // بررسی و تشکیل گروه
-        const val ACTION_TAKEN = "22"   // اقدام شده
-
-        // زیروضعیت‌های متوقف
-        const val WAITING_START = "31"  // منتظر تعیین زمان شروع
-        const val WAITING_OPERATOR = "32" // منتظر بهره‌بردار
-        const val WAITING_PARTS = "33"  // منتظر کالا/قطعه
-        const val WAITING_TEST = "34"   // منتظر تست بهره‌بردار
-
-        // زیروضعیت‌های انجام شده
+        const val NOT_ACTIONED = "1"
+        const val IN_PROGRESS = "2"
+        const val BLOCKED = "3"
         const val FINISHED = "41"       // اتمام کار
-        const val WAITING_SIGN = "42"   // منتظر امضا
-        const val WAITING_REMOVE = "43" // منتظر حذف از کارتابل
+        const val ARCHIVED = "5"
 
         fun getText(code: String): String {
             return when (code) {
-                UNASSIGNED -> "اقدام نشده"
+                NOT_ACTIONED -> "اقدام نشده"
                 IN_PROGRESS -> "در حال انجام"
-                GROUP_FORMING -> "بررسی و تشکیل گروه"
-                ACTION_TAKEN -> "ادامه دارد"
-                BLOCKED -> "متوقف"
-                WAITING_START -> "منتظر تعیین زمان شروع"
-                WAITING_OPERATOR -> "منتظر بهره‌بردار"
-                WAITING_PARTS -> "منتظر کالا/قطعه"
-                WAITING_TEST -> "منتظر تست بهره‌بردار"
-                COMPLETED -> "انجام شده"
                 FINISHED -> "اتمام کار"
-                WAITING_SIGN -> "منتظر امضا"
-                WAITING_REMOVE -> "منتظر حذف از کارتابل"
+                BLOCKED -> "متوقف"
+                ARCHIVED -> "بایگانی"
                 else -> "نامشخص"
             }
         }

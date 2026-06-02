@@ -10,6 +10,7 @@ import androidx.cardview.widget.CardView
 import com.Mechanic.Workshop.ui.cartable.CartableActivity
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
+import com.Mechanic.Workshop.ui.archive.ArchiveActivity
 import com.Mechanic.Workshop.ui.auth.LoginActivity
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
@@ -42,6 +43,12 @@ class HomeActivity : AppCompatActivity() {
 
         cardCartable.setOnClickListener {
             val intent = Intent(this, CartableActivity::class.java)
+            startActivity(intent)
+        }
+
+        val cardArchive = findViewById<CardView>(R.id.cardArchive)
+        cardArchive.setOnClickListener {
+            val intent = Intent(this, ArchiveActivity::class.java)
             startActivity(intent)
         }
     }
