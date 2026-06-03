@@ -69,10 +69,14 @@ class WorkListFragment : Fragment() {
         loadingLayout = view.findViewById(R.id.loadingLayout)
         swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout)
         recyclerView = view.findViewById(R.id.recyclerViewTasks)
-
         recyclerView.layoutManager = LinearLayoutManager(context)
 
         swipeRefreshLayout.setOnRefreshListener {
+            fetchTasks()
+        }
+
+        // ✅ ابتدا کش، بعد دریافت کارها
+        fetchAndCacheUsersWithCallback {
             fetchTasks()
         }
     }
@@ -176,7 +180,7 @@ class WorkListFragment : Fragment() {
                                 "کارتابل من" -> {
                                     when (userRole) {
                                         Config.RoleCode.EMPLOYEE -> {
-                                            if (task.assignedTo.split(",").contains(currentUserRowId)) {
+                                            if (task.assignedTo.split(",").contains(currentUserRowId) && task.status != "5") {
                                                 taskList.add(task)
                                             }
                                         }
@@ -190,7 +194,7 @@ class WorkListFragment : Fragment() {
                                             }
                                         }
                                         Config.RoleCode.MANAGER -> {
-                                            if (task.hasUnseenReport) {
+                                            if (task.hasUnseenReport && task.status != "5") {
                                                 taskList.add(task)
                                             }
                                         }
@@ -536,6 +540,29 @@ class WorkListFragment : Fragment() {
                 Log.e("UserCache", "Network error: ${error.message}")
             })
 
+        Volley.newRequestQueue(requireContext()).add(request)
+    }
+
+    private fun fetchAndCacheUsersWithCallback(onComplete: () -> Unit) {
+        val url = "${Config.BASE_URL}?action=getEmployees"
+        val request = StringRequest(
+            Request.Method.GET, url,
+            { response ->
+                try {
+                    val usersArray = JSONArray(response)
+                    for (i in 0 until usersArray.length()) {
+                        val obj = usersArray.getJSONObject(i)
+                        Config.UserCache.userMap[obj.getString("rowId")] = obj.getString("name")
+                    }
+                } catch (e: Exception) {
+                    Log.e("UserCache", "Error: ${e.message}")
+                }
+                onComplete()
+            },
+            { error ->
+                Log.e("UserCache", "Network error: ${error.message}")
+                onComplete()
+            })
         Volley.newRequestQueue(requireContext()).add(request)
     }
 }

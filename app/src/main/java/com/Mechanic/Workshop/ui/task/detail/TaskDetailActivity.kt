@@ -166,18 +166,13 @@ class TaskDetailActivity : AppCompatActivity() {
                     }
                 }
                 "41" -> {
-                    when {
-                        userRole == Config.RoleCode.SUPERVISOR -> {
-                            buttonMode = "FINAL_REVIEW"  // نارنجی - اولویت با نقش سرشیفت
-                            onButtonClick = { completeTask() }
-                        }
-                        isResponsible -> {
-                            buttonMode = "REQUEST_COMPLETE"  // سبز
-                            onButtonClick = { completeTask() }
-                        }
+                    // فقط سرشیفت (حتی اگر خودش مسئول باشد)
+                    if (userRole == Config.RoleCode.SUPERVISOR) {
+                        buttonMode = "FINAL_REVIEW"
+                        onButtonClick = { completeTask() }
                     }
                 }
-                else -> { // 1,2,3,22
+                else -> { // 1,2,3
                     // فقط مسئول کار
                     if (isResponsible) {
                         buttonMode = "ADD_LOG"

@@ -57,15 +57,20 @@ class TaskDetailAdapter(
         private const val TYPE_ADD_LOG = 2
     }
 
+    override fun getItemCount(): Int {
+        val hasAddLog = buttonMode != "HIDDEN"
+        return 1 + logs.size + (if (hasAddLog) 1 else 0)
+    }
+
     override fun getItemViewType(position: Int): Int {
         return when (position) {
             0 -> TYPE_TASK_INFO
-            logs.size + 1 -> TYPE_ADD_LOG
+            logs.size + 1 -> {
+                if (buttonMode != "HIDDEN") TYPE_ADD_LOG else -1
+            }
             else -> TYPE_TASK_LOG
         }
     }
-
-    override fun getItemCount(): Int = logs.size + 2
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
@@ -74,14 +79,12 @@ class TaskDetailAdapter(
                     .inflate(R.layout.item_task_info_static, parent, false)
                 TaskInfoViewHolder(view)
             }
-
             TYPE_TASK_LOG -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_task_log, parent, false)
                 TaskLogViewHolder(view)
             }
-
-            else -> {
+            TYPE_ADD_LOG -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_add_log, parent, false)
                 AddLogViewHolder(
@@ -94,6 +97,7 @@ class TaskDetailAdapter(
                     onButtonClick
                 )
             }
+            else -> throw IllegalArgumentException("Unknown view type")
         }
     }
 

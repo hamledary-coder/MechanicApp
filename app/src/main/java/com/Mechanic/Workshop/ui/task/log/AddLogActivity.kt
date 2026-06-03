@@ -280,8 +280,8 @@ class AddLogActivity : AppCompatActivity() {
             .setListener(object : PersianPickerListener {
                 override fun onDateSelected(persianPickerDate: PersianPickerDate) {
                     val year = persianPickerDate.persianYear
-                    val month = persianPickerDate.persianMonth
-                    val day = persianPickerDate.persianDay
+                    val month = String.format("%02d", persianPickerDate.persianMonth)   // دو رقمی
+                    val day = String.format("%02d", persianPickerDate.persianDay)       // دو رقمی
                     etDate.setText("$year/$month/$day")
                 }
                 override fun onDismissed() { }
@@ -476,10 +476,11 @@ class AddLogActivity : AppCompatActivity() {
             else -> "2"
         }
 
-        // ✅ اضافه کن: اگر وضعیت لاگ 41 است، وضعیت تسک را هم 41 کن
-        if (selectedStatus == "4") {
-            updateTaskStatusTo4()
-        }
+        // تعیین وضعیت جدید کار بر اساس وضعیت لاگ
+        val newTaskStatus = if (selectedStatus == "4") "4" else "2"
+
+        // به‌روزرسانی وضعیت کار در سرور
+        updateTaskStatusDirectly(newTaskStatus)
 
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
         val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
@@ -554,19 +555,7 @@ class AddLogActivity : AppCompatActivity() {
         )
     }
 
-    private fun updateTaskStatusTo4() {
-        val url = "${Config.BASE_URL}?action=updateTaskStatus"
-        val jsonObject = JSONObject().apply {
-            put("taskId", task?.id ?: "")
-            put("status", "4")
-        }
-        val request = JsonObjectRequest(
-            Request.Method.POST, url, jsonObject,
-            { _ -> },  // موفقیت، کاری نمی‌کنیم
-            { error -> Log.e("AddLog", "Error updating task status: ${error.message}") }
-        )
-        VolleySingleton.getInstance(this).add(request)
-    }
+
 
     private fun updateLog() {
         val selectedStatus = when (spinnerNewStatus.selectedItemPosition) {
@@ -576,11 +565,20 @@ class AddLogActivity : AppCompatActivity() {
             else -> "2"
         }
 
+        // تعیین وضعیت جدید کار
+        val newTaskStatus = when (selectedStatus) {
+            "4" -> "4"
+            else -> "2"
+        }
+
+        // همیشه وضعیت کار را به‌روز کن (چه 4 باشد چه 2)
+        updateTaskStatusDirectly(newTaskStatus)
+
+
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
         val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
         val currentUserName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
 
-        // دریافت متن شرطی
         val conditionalText = if (etConditionalText.visibility == View.VISIBLE) {
             etConditionalText.text.toString()
         } else {
@@ -609,7 +607,6 @@ class AddLogActivity : AppCompatActivity() {
             heatLevel = currentHeat,
             pollutionLevel = currentPollution,
             workType = currentWorkType
-
         )
 
         taskLogRepository.updateTaskLog(
@@ -629,6 +626,21 @@ class AddLogActivity : AppCompatActivity() {
         )
     }
 
+
+
+    private fun updateTaskStatusDirectly(newStatus: String) {
+        val url = "${Config.BASE_URL}?action=updateTaskStatus"
+        val jsonObject = JSONObject().apply {
+            put("taskId", task?.id ?: "")
+            put("status", newStatus)
+        }
+        val request = JsonObjectRequest(
+            Request.Method.POST, url, jsonObject,
+            { _ -> },
+            { error -> Log.e("AddLog", "Error updating task status to $newStatus: ${error.message}") }
+        )
+        VolleySingleton.getInstance(this).add(request)
+    }
     private fun updateWorkConditionButton() {
         val workTypeText = when (currentWorkType) {
             "1" -> "تجهیزات ثابت"
