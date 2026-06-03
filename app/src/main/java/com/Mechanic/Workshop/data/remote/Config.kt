@@ -16,15 +16,17 @@ object Config {
         const val NOT_ACTIONED = "1"
         const val IN_PROGRESS = "2"
         const val BLOCKED = "3"
-        const val FINISHED = "41"       // اتمام کار
-        const val ARCHIVED = "5"
+        const val REQUEST_COMPLETE = "4"      // اضافه کن
+        const val SENT_TO_SUPERVISOR = "41"   // اضافه کن
+        const val ARCHIVED = "5"              // اضافه کن
 
         fun getText(code: String): String {
             return when (code) {
                 NOT_ACTIONED -> "اقدام نشده"
                 IN_PROGRESS -> "در حال انجام"
-                FINISHED -> "اتمام کار"
                 BLOCKED -> "متوقف"
+                REQUEST_COMPLETE -> "درخواست اتمام"
+                SENT_TO_SUPERVISOR -> "ارسال به سرشیفت"
                 ARCHIVED -> "بایگانی"
                 else -> "نامشخص"
             }

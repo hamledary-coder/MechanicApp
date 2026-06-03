@@ -40,7 +40,6 @@ class ArchiveActivity : AppCompatActivity() {
 
     private fun loadArchivedTasks() {
         val url = "${Config.BASE_URL}?action=getTasks&status=5"
-        Log.d("Archive", "URL: $url")
 
         val request = StringRequest(
             Request.Method.GET, url,
@@ -106,6 +105,7 @@ class ArchiveActivity : AppCompatActivity() {
         val intent = Intent(this, TaskDetailActivity::class.java)
         intent.putExtra("TASK_ID", task.id)
         intent.putExtra("TITLE", task.title)
+        intent.putExtra("STATUS", task.status)
         intent.putExtra("DESC", task.description)
         intent.putExtra("CREATOR", task.creator)
         intent.putExtra("DATE", task.createDate)
@@ -121,7 +121,6 @@ class ArchiveActivity : AppCompatActivity() {
         intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
         intent.putExtra("URGENCY", task.urgency)
         intent.putExtra("REFERRED_BY", task.referredBy)
-        Log.d("Archive", "Opening task detail for taskId: ${task.id}")
         startActivity(intent)
     }
 

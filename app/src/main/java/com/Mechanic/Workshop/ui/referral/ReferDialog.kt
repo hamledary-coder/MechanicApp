@@ -1,5 +1,6 @@
 package com.Mechanic.Workshop.ui.referral
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
 import android.view.LayoutInflater
@@ -21,7 +22,6 @@ import android.util.Log
 
 class ReferDialog(
     private val context: Context,
-    private val taskId: String,
     private val taskTitle: String,
     private val currentAssignees: String = "",
     private val currentResponsible: String = ""
@@ -38,6 +38,7 @@ class ReferDialog(
         this.onReferSubmit = listener
     }
 
+    @SuppressLint("SetTextI18n")
     fun show() {
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_refer, null)
 
@@ -161,7 +162,7 @@ class ReferDialog(
                             val obj = jsonArray.getJSONObject(i)
                             val role = obj.getString("role")
                             // فقط نقش‌های ۲ (مدیر) و ۳ (کارمند) نمایش داده شوند
-                            if (role == Config.RoleCode.EMPLOYEE || role == Config.RoleCode.MANAGER) {
+                            if (role == Config.RoleCode.EMPLOYEE || role == Config.RoleCode.SUPERVISOR) {
                                 employees.add(
                                     Employee(
                                         id = obj.getString("rowId"),

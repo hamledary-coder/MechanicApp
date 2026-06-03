@@ -12,10 +12,15 @@ import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.ui.task.log.AddLogActivity
 import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
 import TaskModel
+import android.util.Log
+import android.view.View
 import com.Mechanic.Workshop.ui.task.complete.CompleteTaskActivity
 import com.Mechanic.Workshop.utils.SeenItem
 import com.Mechanic.Workshop.utils.SeenManager
 import com.Mechanic.Workshop.data.remote.Config
+import com.Mechanic.Workshop.utils.VolleySingleton
+import com.android.volley.Request
+import com.android.volley.toolbox.JsonObjectRequest
 
 class TaskDetailActivity : AppCompatActivity() {
 
@@ -25,8 +30,9 @@ class TaskDetailActivity : AppCompatActivity() {
     private val logsList = mutableListOf<TaskLogModel>()
     private lateinit var taskLogRepository: TaskLogRepository
 
+
     companion object {
-        private const val STATUS_COMPLETED = "41"
+        private const val STATUS_REQUEST_COMPLETE = "4"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,7 +77,7 @@ class TaskDetailActivity : AppCompatActivity() {
             title = intent.getStringExtra("TITLE") ?: "",
             description = intent.getStringExtra("DESC") ?: "",
             creator = intent.getStringExtra("CREATOR") ?: "",
-            status = "1",
+            status = intent.getStringExtra("STATUS") ?: "1",
             assignedTo = intent.getStringExtra("ASSIGNED_TO") ?: "",
             responsible = intent.getStringExtra("RESPONSIBLE") ?: "",
             pendingInvites = "",
@@ -115,15 +121,71 @@ class TaskDetailActivity : AppCompatActivity() {
         logsList.clear()
         logsList.addAll(logs)
 
-        if (logs.isNotEmpty()) {
-            task = task.copy(status = logs.last().newStatus)
+        // دریافت وضعیت واقعی تسک از سرور
+        fetchTaskStatus { taskStatus ->
+            task = task.copy(status = taskStatus)
+            setupAdapter()
         }
+    }
 
-        setupAdapter()
+    private fun fetchTaskStatus(callback: (String) -> Unit) {
+        val url = "${Config.BASE_URL}?action=getTask&taskId=${task.id}"
+        val request = JsonObjectRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                callback(response.optString("status", "1"))
+            },
+            { error ->
+                Log.e("TaskDetail", "Error fetching task status: ${error.message}")
+                callback(logsList.lastOrNull()?.newStatus ?: "1")
+            }
+        )
+        VolleySingleton.getInstance(this).add(request)
     }
 
     private fun setupAdapter() {
-        val hasCompletionLog = logsList.any { it.newStatus == STATUS_COMPLETED }
+        val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+        val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
+
+        val hasCompletionLog = logsList.any { it.newStatus == "4" || it.newStatus == "41" }
+
+        val isResponsible = task.responsible == currentUserId
+        val isArchived = task.status == "5"
+
+        var buttonMode = "HIDDEN"
+        var onButtonClick: () -> Unit = {}
+
+        if (!isArchived) {
+            when (task.status) {
+                "4" -> {
+                    // فقط مسئول کار
+                    if (isResponsible) {
+                        buttonMode = "REQUEST_COMPLETE"
+                        onButtonClick = { completeTask() }
+                    }
+                }
+                "41" -> {
+                    when {
+                        userRole == Config.RoleCode.SUPERVISOR -> {
+                            buttonMode = "FINAL_REVIEW"  // نارنجی - اولویت با نقش سرشیفت
+                            onButtonClick = { completeTask() }
+                        }
+                        isResponsible -> {
+                            buttonMode = "REQUEST_COMPLETE"  // سبز
+                            onButtonClick = { completeTask() }
+                        }
+                    }
+                }
+                else -> { // 1,2,3,22
+                    // فقط مسئول کار
+                    if (isResponsible) {
+                        buttonMode = "ADD_LOG"
+                        onButtonClick = { startAddLogActivity() }
+                    }
+                }
+            }
+        }
 
         adapter = TaskDetailAdapter(
             task = task,
@@ -133,11 +195,15 @@ class TaskDetailActivity : AppCompatActivity() {
             onAddLogClick = { startAddLogActivity() },
             onRefreshLogs = { loadTaskLogs() },
             onCompleteTaskClick = { completeTask() },
-            showCompleteButton = hasCompletionLog
+            showCompleteButton = hasCompletionLog,
+            canAddLog = true,
+            currentUserId = currentUserId,
+            userRole = userRole,
+            buttonMode = buttonMode,
+            onButtonClick = onButtonClick
         )
         recyclerView.adapter = adapter
     }
-
     private fun startAddLogActivity(log: TaskLogModel? = null) {
         val intent = Intent(this, AddLogActivity::class.java).apply {
             if (log != null) {

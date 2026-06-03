@@ -183,9 +183,9 @@ class WorkListFragment : Fragment() {
                                         Config.RoleCode.SUPERVISOR -> {
                                             val isInvolved = task.assignedTo.split(",").contains(currentUserRowId) ||
                                                     task.responsible == currentUserRowId
-                                            val isCompleted = task.status == "41"
+                                            val isCompleted = task.status == "4"
                                             val hasNewReport = task.hasUnseenReport
-                                            if (isInvolved || isCompleted || hasNewReport) {
+                                            if ((isInvolved || isCompleted || hasNewReport) && task.status != "5") {
                                                 taskList.add(task)
                                             }
                                         }
@@ -303,6 +303,7 @@ class WorkListFragment : Fragment() {
         val intent = Intent(requireContext(), TaskDetailActivity::class.java)
         intent.putExtra("TASK_ID", task.id)
         intent.putExtra("TITLE", task.title)
+        intent.putExtra("STATUS", task.status)
         intent.putExtra("DESC", task.description)
         intent.putExtra("CREATOR", task.creator)
         intent.putExtra("DATE", task.createDate)
@@ -374,8 +375,7 @@ class WorkListFragment : Fragment() {
         }
 
         val referDialog = ReferDialog(
-            context = requireContext(),
-            taskId = task.id,
+            context = requireContext(),//
             taskTitle = task.title,
             currentAssignees = task.assignedTo,
             currentResponsible = task.responsible

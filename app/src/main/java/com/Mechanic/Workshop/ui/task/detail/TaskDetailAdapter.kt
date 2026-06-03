@@ -20,6 +20,7 @@ import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.task.log.AddLogActivity
 import com.Mechanic.Workshop.utils.VolleySingleton
 import TaskModel
+import android.annotation.SuppressLint
 import android.content.res.Resources
 import android.graphics.drawable.GradientDrawable
 import android.util.Log
@@ -42,7 +43,12 @@ class TaskDetailAdapter(
     private val onAddLogClick: () -> Unit,
     private val onRefreshLogs: () -> Unit,
     private val onCompleteTaskClick: () -> Unit,     // ← جدید
-    private val showCompleteButton: Boolean = false  // ← جدید
+    private val showCompleteButton: Boolean = false,  // ← جدید
+    private val canAddLog: Boolean = true,
+    private val currentUserId: String = "",     // ✅ اضافه کن
+    private val userRole: String = "",
+    private val buttonMode: String = "HIDDEN",
+    private val onButtonClick: () -> Unit = {}
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -68,15 +74,25 @@ class TaskDetailAdapter(
                     .inflate(R.layout.item_task_info_static, parent, false)
                 TaskInfoViewHolder(view)
             }
+
             TYPE_TASK_LOG -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_task_log, parent, false)
                 TaskLogViewHolder(view)
             }
+
             else -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_add_log, parent, false)
-                AddLogViewHolder(view, onAddLogClick, onCompleteTaskClick, showCompleteButton)
+                AddLogViewHolder(
+                    view,
+                    onAddLogClick,
+                    onCompleteTaskClick,
+                    showCompleteButton,
+                    canAddLog,
+                    buttonMode,
+                    onButtonClick
+                )
             }
         }
     }
@@ -86,7 +102,10 @@ class TaskDetailAdapter(
             is TaskInfoViewHolder -> holder.bind(task)
             is TaskLogViewHolder -> {
                 val log = logs[position - 1]
-                val sharedPref = holder.itemView.context.getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+                val sharedPref = holder.itemView.context.getSharedPreferences(
+                    Config.PrefKeys.USER_PREFS,
+                    Context.MODE_PRIVATE
+                )
                 val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
                 val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
                 holder.bind(log, task, currentUserId, userRole, onDeleteLogClick) {
@@ -104,6 +123,7 @@ class TaskDetailAdapter(
         private val tvResponsible: TextView = itemView.findViewById(R.id.tvTaskResponsible)
         private val tvAssignees: TextView = itemView.findViewById(R.id.tvTaskAssignees)
         private val tvUnit: TextView = itemView.findViewById(R.id.tvTaskUnit)
+
         //private val tvPUrgency: TextView = itemView.findViewById(R.id.tvTaskUrgency)
         private val tvRequestDate: TextView = itemView.findViewById(R.id.tvRequestDate)
         private val tvRequester: TextView = itemView.findViewById(R.id.tvRequester)
@@ -120,7 +140,8 @@ class TaskDetailAdapter(
             tvDescription.text = "شرح: ${task.description.ifEmpty { "توضیحاتی وارد نشده" }}"
 
             if (task.responsible.isNotEmpty()) {
-                val responsibleName = Config.UserCache.userMap[task.responsible] ?: "کاربر ${task.responsible}"
+                val responsibleName =
+                    Config.UserCache.userMap[task.responsible] ?: "کاربر ${task.responsible}"
                 tvResponsible.text = "مسئول: $responsibleName"
                 tvResponsible.visibility = View.VISIBLE
             } else {
@@ -195,7 +216,8 @@ class TaskDetailAdapter(
             }
 
             if (task.referredBy.isNotEmpty()) {
-                val referredByName = Config.UserCache.userMap[task.referredBy] ?: "کاربر ${task.referredBy}"
+                val referredByName =
+                    Config.UserCache.userMap[task.referredBy] ?: "کاربر ${task.referredBy}"
                 tvReferredBy.text = "ارجاع‌دهنده: $referredByName"
                 tvReferredBy.visibility = View.VISIBLE
             } else {
@@ -229,9 +251,15 @@ class TaskDetailAdapter(
         private lateinit var onDeleteCallback: (TaskLogModel) -> Unit
 
 
-
-
-        fun bind(log: TaskLogModel, task: TaskModel, currentUserId: String, userRole: String, onDelete: (TaskLogModel) -> Unit, onRefresh: () -> Unit) {
+        @SuppressLint("SetTextI18n")
+        fun bind(
+            log: TaskLogModel,
+            task: TaskModel,
+            currentUserId: String,
+            userRole: String,
+            onDelete: (TaskLogModel) -> Unit,
+            onRefresh: () -> Unit
+        ) {
             this.currentLog = log
             this.currentTask = task
             this.currentUserId = currentUserId
@@ -291,7 +319,8 @@ class TaskDetailAdapter(
                     val endHour = log.endTime.split(":")[0].toInt()
                     val endMinute = log.endTime.split(":")[1].toInt()
 
-                    var durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute)
+                    var durationMinutes =
+                        (endHour * 60 + endMinute) - (startHour * 60 + startMinute)
                     if (durationMinutes < 0) durationMinutes += 24 * 60
 
                     val hours = durationMinutes / 60
@@ -343,48 +372,63 @@ class TaskDetailAdapter(
             }
 
             // سه نقطه با PopupMenu - ارسال به AddLogActivity در حالت ویرایش
-            ivMenu.visibility = View.VISIBLE
-            ivMenu.setOnClickListener { view ->
-                PopupMenu(view.context, view).apply {
-                    menu.add(0, 1, 0, "ویرایش")
-                    menu.add(0, 2, 0, "حذف")
-                    setOnMenuItemClickListener { menuItem ->
-                        when (menuItem.itemId) {
-                            1 -> {
-                                // باز کردن AddLogActivity در حالت ویرایش
-                                val context = view.context
-                                val intent = Intent(context, AddLogActivity::class.java).apply {
-                                    putExtra("IS_EDIT_MODE", true)
-                                    putExtra("LOG_ID", log.id)
-                                    putExtra("TASK_ID", log.taskId)
-                                    putExtra("TITLE", task.title)
-                                    putExtra("DESC", task.description)
-                                    putExtra("CREATOR", task.creator)
-                                    putExtra("DATE", task.createDate)
-                                    putExtra("RESPONSIBLE", task.responsible)
-                                    putExtra("ASSIGNED_TO", task.assignedTo)
-                                    putExtra("UNIT", task.unit)
-                                    putExtra("PRIORITY", task.priority)
-                                    putExtra("SUB_UNIT", task.sub_unit)
-                                    putExtra("DECLARATION_METHOD", task.declaration_method)
-                                    putExtra("REQUESTER", task.requester)
-                                    putExtra("REQUEST_DATE", task.request_date)
-                                    putExtra("INITIAL_REVIEW", task.initial_review)
-                                    putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
-                                    putExtra("URGENCY", task.urgency)
+            val canEditDelete = log.userId == currentUserId
+
+            if (canEditDelete) {
+                ivMenu.visibility = View.VISIBLE
+                ivMenu.setOnClickListener { view ->
+                    PopupMenu(view.context, view).apply {
+                        menu.add(0, 1, 0, "ویرایش")
+                        menu.add(0, 2, 0, "حذف")
+                        setOnMenuItemClickListener { menuItem ->
+                            when (menuItem.itemId) {
+                                1 -> {
+                                    // باز کردن AddLogActivity در حالت ویرایش
+                                    val context = view.context
+                                    val intent = Intent(context, AddLogActivity::class.java).apply {
+                                        putExtra("IS_EDIT_MODE", true)
+                                        putExtra("LOG_ID", log.id)
+                                        putExtra("TASK_ID", log.taskId)
+                                        putExtra("TITLE", task.title)
+                                        putExtra("DESC", task.description)
+                                        putExtra("CREATOR", task.creator)
+                                        putExtra("DATE", task.createDate)
+                                        putExtra("RESPONSIBLE", task.responsible)
+                                        putExtra("ASSIGNED_TO", task.assignedTo)
+                                        putExtra("UNIT", task.unit)
+                                        putExtra("PRIORITY", task.priority)
+                                        putExtra("SUB_UNIT", task.sub_unit)
+                                        putExtra("DECLARATION_METHOD", task.declaration_method)
+                                        putExtra("REQUESTER", task.requester)
+                                        putExtra("REQUEST_DATE", task.request_date)
+                                        putExtra("INITIAL_REVIEW", task.initial_review)
+                                        putExtra(
+                                            "SYSTEM_REQUEST_NUMBER",
+                                            task.system_request_number
+                                        )
+                                        putExtra("URGENCY", task.urgency)
+                                    }
+                                    context.startActivity(intent)
                                 }
-                                context.startActivity(intent)
+
+                                2 -> {
+                                    Toast.makeText(
+                                        view.context,
+                                        "حذف گزارش ${log.id}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    onDeleteCallback(log)
+                                }
                             }
-                            2 -> {
-                                Toast.makeText(view.context, "حذف گزارش ${log.id}", Toast.LENGTH_SHORT).show()
-                                onDeleteCallback(log)
-                            }
+                            true
                         }
-                        true
+                        show()
                     }
-                    show()
                 }
+            } else {
+                ivMenu.visibility = View.GONE
             }
+
         }
 
         private fun setExpanded(expanded: Boolean) {
@@ -507,11 +551,16 @@ class TaskDetailAdapter(
 
         private fun addNewComment(text: String) {
             try {
-                val sharedPref = itemView.context.getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+                val sharedPref = itemView.context.getSharedPreferences(
+                    Config.PrefKeys.USER_PREFS,
+                    Context.MODE_PRIVATE
+                )
                 val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
-                val currentUserName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
-                val timestamp = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault())
-                    .format(java.util.Date())
+                val currentUserName =
+                    sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+                val timestamp =
+                    java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault())
+                        .format(java.util.Date())
                 val commentId = System.currentTimeMillis().toString()
 
                 val newComment = JSONObject().apply {
@@ -541,11 +590,13 @@ class TaskDetailAdapter(
                 updateLogComments(currentLog.id, currentComments.toString())
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(itemView.context, "خطا در ثبت نظر: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(itemView.context, "خطا در ثبت نظر: ${e.message}", Toast.LENGTH_SHORT)
+                    .show()
                 btnAddComment.isEnabled = true
                 btnAddComment.text = "ثبت نظر"
             }
         }
+
         private fun updateLogComments(logId: String, commentsJson: String) {
             val url = "${Config.BASE_URL}?action=updateLogComments"
             val jsonObject = JSONObject().apply {
@@ -563,14 +614,16 @@ class TaskDetailAdapter(
                     } else {
                         btnAddComment.isEnabled = true
                         btnAddComment.text = "ثبت نظر"
-                        Toast.makeText(itemView.context, "خطا در ثبت نظر", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(itemView.context, "خطا در ثبت نظر", Toast.LENGTH_SHORT)
+                            .show()
                     }
                 },
                 { error ->
                     btnAddComment.isEnabled = true
                     btnAddComment.text = "ثبت نظر"
                     error.printStackTrace()
-                    Toast.makeText(itemView.context, "خطا در اتصال به شبکه", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(itemView.context, "خطا در اتصال به شبکه", Toast.LENGTH_SHORT)
+                        .show()
                 }
             )
             VolleySingleton.getInstance(itemView.context).add(request)
@@ -628,27 +681,50 @@ class TaskDetailAdapter(
         fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
     }
 
+
     class AddLogViewHolder(
         itemView: View,
         onAddLogClick: () -> Unit,
         onCompleteTaskClick: () -> Unit,
-        showCompleteButton: Boolean
+        showCompleteButton: Boolean,
+        canAddLog: Boolean,
+        private val buttonMode: String,
+        private val onButtonClick: () -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
         init {
             val btn = itemView.findViewById<Button>(R.id.btnAddLog)
-            if (showCompleteButton) {
-                btn.text = "اعلام اتمام کار"
-                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor("#2E7D32")  // سبز
-                )
-                btn.setOnClickListener { onCompleteTaskClick() }
-            } else {
-                btn.text = "ثبت گزارش جدید"
-                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor("#9C27B0")  // بنفش
-                )
-                btn.setOnClickListener { onAddLogClick() }
+
+            when (buttonMode) {
+                "ADD_LOG" -> {
+                    btn.text = "ثبت گزارش جدید"
+                    btn.setOnClickListener { onAddLogClick() }
+                    btn.visibility = View.VISIBLE
+                    btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                        android.graphics.Color.parseColor("#9C27B0")
+                    )
+                }
+                "REQUEST_COMPLETE" -> {
+                    btn.text = "اعلام اتمام کار"
+                    btn.setOnClickListener { onCompleteTaskClick() }
+                    btn.visibility = View.VISIBLE
+                    btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                        android.graphics.Color.parseColor("#2E7D32")
+                    )
+                }
+                "FINAL_REVIEW" -> {
+                    btn.text = "بررسی و تأیید نهایی"
+                    btn.setOnClickListener { onButtonClick() }
+                    btn.visibility = View.VISIBLE
+                    btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                        android.graphics.Color.parseColor("#FF9800")
+                    )
+                }
+                else -> {
+                    btn.visibility = View.GONE
+                }
             }
         }
     }
 }
+
+

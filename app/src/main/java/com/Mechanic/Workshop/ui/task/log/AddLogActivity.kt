@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.app.TimePickerDialog
 import android.content.Intent
+import android.util.Log
 import android.view.View
 import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
@@ -405,7 +406,7 @@ class AddLogActivity : AppCompatActivity() {
         val statusList = listOf(
             "22" to "ادامه دارد",
             "3" to "متوقف",
-            "41" to "اتمام کار"
+            "4" to "اتمام کار"
         )
 
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, statusList.map { it.second })
@@ -469,10 +470,15 @@ class AddLogActivity : AppCompatActivity() {
 
     private fun submitLog() {
         val selectedStatus = when (spinnerNewStatus.selectedItemPosition) {
-            0 -> "22"
+            0 -> "2"
             1 -> "3"
-            2 -> "41"
-            else -> "22"
+            2 -> "4"
+            else -> "2"
+        }
+
+        // ✅ اضافه کن: اگر وضعیت لاگ 41 است، وضعیت تسک را هم 41 کن
+        if (selectedStatus == "4") {
+            updateTaskStatusTo4()
         }
 
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
@@ -516,7 +522,7 @@ class AddLogActivity : AppCompatActivity() {
                     Toast.makeText(this, "گزارش با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
                     setResult(RESULT_OK)
 
-                    if (selectedStatus == "41") {
+                    if (selectedStatus == "4") {
                         // باز کردن صفحه جزئیات کار
                         val intent = Intent(this, TaskDetailActivity::class.java)
                         intent.putExtra("TASK_ID", task?.id ?: "")
@@ -548,12 +554,26 @@ class AddLogActivity : AppCompatActivity() {
         )
     }
 
+    private fun updateTaskStatusTo4() {
+        val url = "${Config.BASE_URL}?action=updateTaskStatus"
+        val jsonObject = JSONObject().apply {
+            put("taskId", task?.id ?: "")
+            put("status", "4")
+        }
+        val request = JsonObjectRequest(
+            Request.Method.POST, url, jsonObject,
+            { _ -> },  // موفقیت، کاری نمی‌کنیم
+            { error -> Log.e("AddLog", "Error updating task status: ${error.message}") }
+        )
+        VolleySingleton.getInstance(this).add(request)
+    }
+
     private fun updateLog() {
         val selectedStatus = when (spinnerNewStatus.selectedItemPosition) {
-            0 -> "22"
+            0 -> "2"
             1 -> "3"
-            2 -> "41"
-            else -> "22"
+            2 -> "4"
+            else -> "2"
         }
 
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)

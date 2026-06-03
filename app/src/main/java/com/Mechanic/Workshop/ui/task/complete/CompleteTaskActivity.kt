@@ -1,5 +1,6 @@
 package com.Mechanic.Workshop.ui.task.complete
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -15,6 +16,7 @@ import androidx.core.content.ContextCompat
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.data.remote.Config
+import com.Mechanic.Workshop.ui.cartable.CartableActivity
 import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
 import com.Mechanic.Workshop.utils.VolleySingleton
 import com.android.volley.Request
@@ -42,8 +44,9 @@ class CompleteTaskActivity : AppCompatActivity() {
 
     companion object {
         private const val STATUS_IN_PROGRESS = "2"
-        private const val STATUS_REQUEST_COMPLETE = "41"
-        private const val STATUS_COMPLETED = "4"
+        private const val STATUS_REQUEST_COMPLETE = "4"
+        private const val STATUS_SENT_TO_SUPERVISOR = "41"   // ✅ جدید
+        private const val STATUS_ARCHIVED = "5"             // ✅ جدید
         private const val STATUS_REJECTED = "22"
     }
 
@@ -101,17 +104,28 @@ class CompleteTaskActivity : AppCompatActivity() {
 
     private fun setupButtonsByRoleAndStatus() {
         when {
-            isEmployeeRequestingCompletion() -> setupEmployeeCompletion()
-            isSupervisorApproving() -> setupSupervisorApproval()
-            else -> setupDefaultCompletion()
+            isEmployeeRequestingCompletion() -> {
+                // کارمند: نمایش دکمه اعلام اتمام کار
+                setupEmployeeCompletion()
+            }
+            isSupervisorApproving() -> {
+                // سرشیفت: نمایش دکمه تأیید و برگشت
+                setupSupervisorApproval()
+            }
+            else -> {
+                // حالت پیش‌فرض (امنیتی)
+                setupDefaultCompletion()
+            }
         }
     }
 
     private fun isEmployeeRequestingCompletion(): Boolean =
-        userRole == Config.RoleCode.EMPLOYEE && currentStatus == STATUS_IN_PROGRESS
+        userRole == Config.RoleCode.EMPLOYEE && (currentStatus == STATUS_IN_PROGRESS || currentStatus == STATUS_REQUEST_COMPLETE)
+    // ✅ اضافه شد: || currentStatus == STATUS_REQUEST_COMPLETE
 
     private fun isSupervisorApproving(): Boolean =
-        userRole == Config.RoleCode.SUPERVISOR && currentStatus == STATUS_REQUEST_COMPLETE
+        userRole == Config.RoleCode.SUPERVISOR && currentStatus == STATUS_SENT_TO_SUPERVISOR
+    // ✅ باید STATUS_SENT_TO_SUPERVISOR باشد (41) نه STATUS_REQUEST_COMPLETE (4)
 
     private fun setupEmployeeCompletion() {
         showConfirmButton("اعلام اتمام کار") { completeTaskAsResponsible() }
@@ -287,25 +301,32 @@ class CompleteTaskActivity : AppCompatActivity() {
     }
 
     private fun completeTaskAsResponsible() {
-        updateTaskStatus(taskId, STATUS_REQUEST_COMPLETE) { success ->
+        updateTaskStatus(taskId, STATUS_SENT_TO_SUPERVISOR) { success ->
             if (success) {
-                Toast.makeText(this, "درخواست تأیید شرایط و مدت زمان به سرشیفت ارسال شد", Toast.LENGTH_SHORT).show()
-                finish()
+                Toast.makeText(this, "درخواست تأیید به سرشیفت ارسال شد", Toast.LENGTH_SHORT).show()
+                navigateToCartable()
             } else {
-                Toast.makeText(this, "خطا در اتمام کار", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "خطا در ارسال درخواست", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun completeTaskAsSupervisor() {
-        updateTaskStatus(taskId, "5") { success ->
+        updateTaskStatus(taskId, STATUS_ARCHIVED) { success ->
             if (success) {
                 Toast.makeText(this, "کار تأیید و بایگانی شد", Toast.LENGTH_SHORT).show()
-                finish()
+                navigateToCartable()
             } else {
-                Toast.makeText(this, "خطا در اتمام کار", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "خطا در بایگانی", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun navigateToCartable() {
+        val intent = Intent(this, CartableActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(intent)
+        finish()
     }
 
     private fun updateTaskStatus(taskId: String, newStatus: String, callback: (Boolean) -> Unit) {
