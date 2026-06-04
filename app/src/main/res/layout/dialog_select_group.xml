@@ -3,48 +3,109 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:layoutDirection="rtl">
+    android:maxHeight="500dp">
 
+    <!-- عنوان -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="انتخاب گروه انجام‌دهنده"
+        android:text="انتخاب افراد گروه"
         android:textSize="18sp"
         android:textStyle="bold"
         android:gravity="center"
-        android:layout_marginBottom="16dp"
-        android:textColor="#2E7D32" />
+        android:padding="16dp"
+        android:background="?attr/colorPrimary"
+        android:textColor="@android:color/white" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerViewGroup"
+    <!-- آمار انتخاب‌ها -->
+    <TextView
+        android:id="@+id/tvSelectionCount"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_height="wrap_content"
+        android:text="0 نفر انتخاب شده"
+        android:gravity="center"
+        android:padding="8dp"
+        android:textSize="14sp"
+        android:textColor="@android:color/darker_gray"
+        android:background="#F5F5F5" />
 
+    <!-- نوار جستجو (اختیاری) -->
+    <androidx.appcompat.widget.SearchView
+        android:id="@+id/searchView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:queryHint="جستجوی نام..."
+        android:iconifiedByDefault="false"
+        android:padding="8dp" />
+
+    <!-- محتوای اصلی با اسکرول -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:minHeight="300dp">
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="در حال بارگذاری..."
+            android:visibility="gone"
+            android:textSize="14sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewGroup"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="vertical"
+            android:padding="4dp" />
+
+    </FrameLayout>
+
+    <!-- دکمه‌ها -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:orientation="horizontal"
-        android:weightSum="2">
+        android:divider="?android:attr/dividerHorizontal"
+        android:showDividers="middle"
+        android:padding="12dp">
 
         <Button
             android:id="@+id/btnConfirm"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginEnd="8dp"
             android:text="تأیید"
-            android:backgroundTint="#2E7D32" />
+            android:textSize="14sp"
+            android:backgroundTint="?attr/colorPrimary" />
+
+        <Button
+            android:id="@+id/btnSelectAll"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="انتخاب همه"
+            android:textSize="14sp"
+            android:backgroundTint="@android:color/darker_gray" />
 
         <Button
             android:id="@+id/btnCancel"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
             android:text="انصراف"
-            android:backgroundTint="#9E9E9E" />
+            android:textSize="14sp"
+            android:backgroundTint="@android:color/darker_gray" />
 
     </LinearLayout>
 

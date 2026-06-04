@@ -29,6 +29,7 @@ import android.graphics.Color
 import androidx.cardview.widget.CardView
 import com.Mechanic.Workshop.utils.SeenItem
 import com.Mechanic.Workshop.utils.SeenManager
+import com.Mechanic.Workshop.utils.UserCache
 import org.json.JSONArray
 import org.json.JSONObject
 import com.android.volley.Request
@@ -42,10 +43,10 @@ class TaskDetailAdapter(
     private val onDeleteLogClick: (TaskLogModel) -> Unit,
     private val onAddLogClick: () -> Unit,
     private val onRefreshLogs: () -> Unit,
-    private val onCompleteTaskClick: () -> Unit,     // ← جدید
-    private val showCompleteButton: Boolean = false,  // ← جدید
+    private val onCompleteTaskClick: () -> Unit,
+    private val showCompleteButton: Boolean = false,
     private val canAddLog: Boolean = true,
-    private val currentUserId: String = "",     // ✅ اضافه کن
+    private val currentUserId: String = "",
     private val userRole: String = "",
     private val buttonMode: String = "HIDDEN",
     private val onButtonClick: () -> Unit = {}
@@ -127,8 +128,6 @@ class TaskDetailAdapter(
         private val tvResponsible: TextView = itemView.findViewById(R.id.tvTaskResponsible)
         private val tvAssignees: TextView = itemView.findViewById(R.id.tvTaskAssignees)
         private val tvUnit: TextView = itemView.findViewById(R.id.tvTaskUnit)
-
-        //private val tvPUrgency: TextView = itemView.findViewById(R.id.tvTaskUrgency)
         private val tvRequestDate: TextView = itemView.findViewById(R.id.tvRequestDate)
         private val tvRequester: TextView = itemView.findViewById(R.id.tvRequester)
         private val tvDeclarationMethod: TextView = itemView.findViewById(R.id.tvDeclarationMethod)
@@ -137,32 +136,32 @@ class TaskDetailAdapter(
         private val tvUrgency: TextView = itemView.findViewById(R.id.tvTaskUrgency)
         private val tvReferredBy: TextView = itemView.findViewById(R.id.tvReferredBy)
 
-
         fun bind(task: TaskModel) {
             tvId.text = "شماره کار: ${task.id}"
             tvTitle.text = "عنوان: ${task.title}"
             tvDescription.text = "شرح: ${task.description.ifEmpty { "توضیحاتی وارد نشده" }}"
 
+            // مسئول - استفاده از UserCache.getName
             if (task.responsible.isNotEmpty()) {
-                val responsibleName =
-                    Config.UserCache.userMap[task.responsible] ?: "کاربر ${task.responsible}"
+                val responsibleName = UserCache.getName(task.responsible)
                 tvResponsible.text = "مسئول: $responsibleName"
                 tvResponsible.visibility = View.VISIBLE
             } else {
                 tvResponsible.visibility = View.GONE
             }
 
+            // گروه - استفاده از UserCache.getName
             if (task.assignedTo.isNotEmpty()) {
-                val assigneeNames = task.assignedTo.split(",").map {
-                    Config.UserCache.userMap[it.trim()] ?: "کاربر $it"
-                }
+                val assigneeNames = task.assignedTo.split(",").map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .map { UserCache.getName(it) }
                 tvAssignees.text = "گروه: ${assigneeNames.joinToString("، ")}"
                 tvAssignees.visibility = View.VISIBLE
             } else {
                 tvAssignees.visibility = View.GONE
             }
 
-            // فوریت (urgency)
+            // فوریت
             if (task.urgency.isNotEmpty() && task.urgency != "عادی") {
                 tvUrgency.text = "فوریت: ${task.urgency}"
                 tvUrgency.visibility = View.VISIBLE
@@ -170,6 +169,7 @@ class TaskDetailAdapter(
                 tvUrgency.visibility = View.GONE
             }
 
+            // واحد
             if (task.unit.isNotEmpty() && task.unit != "null") {
                 val unitText = Config.UnitCode.getText(task.unit)
                 if (unitText.isNotEmpty()) {
@@ -182,7 +182,7 @@ class TaskDetailAdapter(
                 tvUnit.visibility = View.GONE
             }
 
-
+            // تاریخ اعلام
             if (task.request_date.isNotEmpty()) {
                 val displayDate = task.request_date.replace("-", "/")
                 tvRequestDate.text = "تاریخ اعلام: $displayDate"
@@ -191,6 +191,7 @@ class TaskDetailAdapter(
                 tvRequestDate.visibility = View.GONE
             }
 
+            // صادرکننده
             if (task.requester.isNotEmpty()) {
                 tvRequester.text = "صادرکننده: ${task.requester}"
                 tvRequester.visibility = View.VISIBLE
@@ -198,6 +199,7 @@ class TaskDetailAdapter(
                 tvRequester.visibility = View.GONE
             }
 
+            // نحوه اعلام
             if (task.declaration_method.isNotEmpty()) {
                 tvDeclarationMethod.text = "نحوه اعلام: ${task.declaration_method}"
                 tvDeclarationMethod.visibility = View.VISIBLE
@@ -205,6 +207,7 @@ class TaskDetailAdapter(
                 tvDeclarationMethod.visibility = View.GONE
             }
 
+            // شماره سامانه
             if (task.system_request_number.isNotEmpty()) {
                 tvSystemNumber.text = "شماره سامانه: ${task.system_request_number}"
                 tvSystemNumber.visibility = View.VISIBLE
@@ -212,6 +215,7 @@ class TaskDetailAdapter(
                 tvSystemNumber.visibility = View.GONE
             }
 
+            // بررسی اولیه
             if (task.initial_review.isNotEmpty()) {
                 tvInitialReview.text = "بررسی اولیه: ${task.initial_review}"
                 tvInitialReview.visibility = View.VISIBLE
@@ -219,9 +223,9 @@ class TaskDetailAdapter(
                 tvInitialReview.visibility = View.GONE
             }
 
+            // ارجاع‌دهنده - استفاده از UserCache.getName
             if (task.referredBy.isNotEmpty()) {
-                val referredByName =
-                    Config.UserCache.userMap[task.referredBy] ?: "کاربر ${task.referredBy}"
+                val referredByName = UserCache.getName(task.referredBy)
                 tvReferredBy.text = "ارجاع‌دهنده: $referredByName"
                 tvReferredBy.visibility = View.VISIBLE
             } else {
@@ -254,7 +258,6 @@ class TaskDetailAdapter(
         private lateinit var currentUserId: String
         private lateinit var onDeleteCallback: (TaskLogModel) -> Unit
 
-
         @SuppressLint("SetTextI18n")
         fun bind(
             log: TaskLogModel,
@@ -270,11 +273,11 @@ class TaskDetailAdapter(
             this.onDeleteCallback = onDelete
             this.onRefreshCallback = onRefresh
 
-            /// رنگ کردن هدر گزارش برای گزارش‌های جدید (فقط مدیر و سرشیفت)
+            // رنگ کردن هدر گزارش برای گزارش‌های جدید
             val isSeenByCurrentUser = currentLog.seenBy.contains(currentUserId)
             if (!isSeenByCurrentUser && (userRole == Config.RoleCode.SUPERVISOR || userRole == Config.RoleCode.MANAGER)) {
-                cardLog.setCardBackgroundColor(Color.parseColor("#E3F2FD"))  // آبی کمرنگ
-                isExpanded = true  // اکسپند خودکار
+                cardLog.setCardBackgroundColor(Color.parseColor("#E3F2FD"))
+                isExpanded = true
             } else {
                 cardLog.setCardBackgroundColor(Color.WHITE)
                 isExpanded = false
@@ -294,17 +297,23 @@ class TaskDetailAdapter(
             }
             tvLogSummary.text = "گزارش ${log.date} - ${log.userName}$timeRange"
 
-            // ✅ نمایش تیک‌های رنگی کاربرانی که دیده‌اند
+            // نمایش تیک‌های رنگی کاربرانی که دیده‌اند
             displaySeenBy(log.seenBy)
 
             tvActionDescription.text = "شرح اقدام: ${log.actionDescription}"
 
+            // گروه انجام دهنده - استفاده از UserCache.getName
             if (log.assignedUsers.isNotEmpty()) {
                 val workerNames = log.assignedUsers.split(",").mapNotNull {
-                    Config.UserCache.userMap[it.trim()]
+                    val name = UserCache.getName(it.trim())
+                    if (name != "نامشخص" && !name.startsWith("کاربر")) name else null
                 }
-                tvWorkers.text = "گروه انجام دهتده: ${workerNames.joinToString("، ")}"
-                tvWorkers.visibility = View.VISIBLE
+                if (workerNames.isNotEmpty()) {
+                    tvWorkers.text = "گروه انجام دهنده: ${workerNames.joinToString("، ")}"
+                    tvWorkers.visibility = View.VISIBLE
+                } else {
+                    tvWorkers.visibility = View.GONE
+                }
             } else {
                 tvWorkers.visibility = View.GONE
             }
@@ -361,11 +370,15 @@ class TaskDetailAdapter(
             // نمایش نظرات
             displayComments(log.comments, currentUserId)
 
-            // دکمه ثبت نظر
-            // دکمه ثبت نظر (برای همه آزاد است)
-            btnAddComment.visibility = View.VISIBLE
-            btnAddComment.setOnClickListener {
-                showAddCommentDialog()
+            // دکمه ثبت نظر فقط برای کارهای غیر بایگانی
+            val isArchived = task.status == "5"
+            if (!isArchived) {
+                btnAddComment.visibility = View.VISIBLE
+                btnAddComment.setOnClickListener {
+                    showAddCommentDialog()
+                }
+            } else {
+                btnAddComment.visibility = View.GONE
             }
 
             setExpanded(isExpanded)
@@ -375,9 +388,8 @@ class TaskDetailAdapter(
                 setExpanded(isExpanded)
             }
 
-            // سه نقطه با PopupMenu - ارسال به AddLogActivity در حالت ویرایش
-            val canEditDelete = log.userId == currentUserId
-
+            // منوی سه نقطه - فقط اگر کار بایگانی نشده باشد و کاربر خودش باشد
+            val canEditDelete = !isArchived && log.userId == currentUserId
             if (canEditDelete) {
                 ivMenu.visibility = View.VISIBLE
                 ivMenu.setOnClickListener { view ->
@@ -387,7 +399,6 @@ class TaskDetailAdapter(
                         setOnMenuItemClickListener { menuItem ->
                             when (menuItem.itemId) {
                                 1 -> {
-                                    // باز کردن AddLogActivity در حالت ویرایش
                                     val context = view.context
                                     val intent = Intent(context, AddLogActivity::class.java).apply {
                                         putExtra("IS_EDIT_MODE", true)
@@ -406,21 +417,13 @@ class TaskDetailAdapter(
                                         putExtra("REQUESTER", task.requester)
                                         putExtra("REQUEST_DATE", task.request_date)
                                         putExtra("INITIAL_REVIEW", task.initial_review)
-                                        putExtra(
-                                            "SYSTEM_REQUEST_NUMBER",
-                                            task.system_request_number
-                                        )
+                                        putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
                                         putExtra("URGENCY", task.urgency)
                                     }
                                     context.startActivity(intent)
                                 }
-
                                 2 -> {
-                                    Toast.makeText(
-                                        view.context,
-                                        "حذف گزارش ${log.id}",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                    Toast.makeText(view.context, "حذف گزارش", Toast.LENGTH_SHORT).show()
                                     onDeleteCallback(log)
                                 }
                             }
@@ -432,7 +435,6 @@ class TaskDetailAdapter(
             } else {
                 ivMenu.visibility = View.GONE
             }
-
         }
 
         private fun setExpanded(expanded: Boolean) {
@@ -441,7 +443,7 @@ class TaskDetailAdapter(
                 divider.visibility = View.VISIBLE
                 detailLayout.visibility = View.VISIBLE
 
-                // ✅ ثبت دیده شدن گزارش
+                // ثبت دیده شدن گزارش
                 if (::currentUserId.isInitialized && currentUserId.isNotEmpty()) {
                     SeenManager.markAsSeen(
                         itemView.context,
@@ -489,7 +491,6 @@ class TaskDetailAdapter(
                     tvHeader.text = "$userName - $timestamp"
                     tvText.text = text
 
-                    // قابلیت اکسپند (باز و بسته شدن)
                     if (text.length > 100) {
                         tvExpand.visibility = View.VISIBLE
                         tvExpand.setOnClickListener {
@@ -503,7 +504,6 @@ class TaskDetailAdapter(
                         }
                     }
 
-                    // دکمه حذف فقط برای نویسنده نظر
                     if (userId == currentUserId) {
                         ivDelete.visibility = View.VISIBLE
                         ivDelete.setOnClickListener {
@@ -560,11 +560,9 @@ class TaskDetailAdapter(
                     Context.MODE_PRIVATE
                 )
                 val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
-                val currentUserName =
-                    sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
-                val timestamp =
-                    java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault())
-                        .format(java.util.Date())
+                val currentUserName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+                val timestamp = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault())
+                    .format(java.util.Date())
                 val commentId = System.currentTimeMillis().toString()
 
                 val newComment = JSONObject().apply {
@@ -575,7 +573,6 @@ class TaskDetailAdapter(
                     put("text", text)
                 }
 
-                // ✅ بررسی null بودن currentLog.comments
                 val commentsStr = currentLog.comments ?: "[]"
                 val currentComments = if (commentsStr.isNotEmpty() && commentsStr != "[]") {
                     try {
@@ -594,8 +591,7 @@ class TaskDetailAdapter(
                 updateLogComments(currentLog.id, currentComments.toString())
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(itemView.context, "خطا در ثبت نظر: ${e.message}", Toast.LENGTH_SHORT)
-                    .show()
+                Toast.makeText(itemView.context, "خطا در ثبت نظر: ${e.message}", Toast.LENGTH_SHORT).show()
                 btnAddComment.isEnabled = true
                 btnAddComment.text = "ثبت نظر"
             }
@@ -614,20 +610,18 @@ class TaskDetailAdapter(
                     if (response.optString("status") == "success") {
                         btnAddComment.isEnabled = true
                         btnAddComment.text = "ثبت نظر"
-                        onRefreshCallback()  // ← رفرش کامل صفحه
+                        onRefreshCallback()
                     } else {
                         btnAddComment.isEnabled = true
                         btnAddComment.text = "ثبت نظر"
-                        Toast.makeText(itemView.context, "خطا در ثبت نظر", Toast.LENGTH_SHORT)
-                            .show()
+                        Toast.makeText(itemView.context, "خطا در ثبت نظر", Toast.LENGTH_SHORT).show()
                     }
                 },
                 { error ->
                     btnAddComment.isEnabled = true
                     btnAddComment.text = "ثبت نظر"
                     error.printStackTrace()
-                    Toast.makeText(itemView.context, "خطا در اتصال به شبکه", Toast.LENGTH_SHORT)
-                        .show()
+                    Toast.makeText(itemView.context, "خطا در اتصال به شبکه", Toast.LENGTH_SHORT).show()
                 }
             )
             VolleySingleton.getInstance(itemView.context).add(request)
@@ -643,12 +637,11 @@ class TaskDetailAdapter(
 
             toShow.forEach { userId ->
                 val userColor = getColorForUserId(userId)
-
                 val tickView = ImageView(itemView.context).apply {
                     setImageResource(R.drawable.ic_check)
                     setColorFilter(userColor, android.graphics.PorterDuff.Mode.SRC_IN)
                     layoutParams = LinearLayout.LayoutParams(12.dpToPx(), 12.dpToPx()).apply {
-                        marginEnd = 0  // ← فاصله صفر
+                        marginEnd = 0
                     }
                 }
                 container.addView(tickView)
@@ -684,7 +677,6 @@ class TaskDetailAdapter(
 
         fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
     }
-
 
     class AddLogViewHolder(
         itemView: View,
@@ -730,5 +722,3 @@ class TaskDetailAdapter(
         }
     }
 }
-
-

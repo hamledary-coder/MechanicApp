@@ -18,9 +18,12 @@ import com.Mechanic.Workshop.ui.task.complete.CompleteTaskActivity
 import com.Mechanic.Workshop.utils.SeenItem
 import com.Mechanic.Workshop.utils.SeenManager
 import com.Mechanic.Workshop.data.remote.Config
+import com.Mechanic.Workshop.utils.UserCache
 import com.Mechanic.Workshop.utils.VolleySingleton
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.StringRequest
+import org.json.JSONArray
 
 class TaskDetailActivity : AppCompatActivity() {
 
@@ -29,7 +32,7 @@ class TaskDetailActivity : AppCompatActivity() {
     private lateinit var task: TaskModel
     private val logsList = mutableListOf<TaskLogModel>()
     private lateinit var taskLogRepository: TaskLogRepository
-
+    private lateinit var progressBar: View
 
     companion object {
         private const val STATUS_REQUEST_COMPLETE = "4"
@@ -38,10 +41,33 @@ class TaskDetailActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_task_detail_new)
-        setupToolbar()
-        initViews()
-        loadTaskData()
-        markTaskAsSeen()
+
+        progressBar = findViewById(R.id.progressBar)
+
+        // اطمینان از بارگذاری کش کاربران
+        if (UserCache.getSize() == 0) {
+            showLoading(true)
+            UserCache.loadAllUsers {
+                runOnUiThread {
+                    showLoading(false)
+                    setupToolbar()
+                    initViews()
+                    loadTaskData()
+                    markTaskAsSeen()
+                    loadTaskLogs()
+                }
+            }
+        } else {
+            setupToolbar()
+            initViews()
+            loadTaskData()
+            markTaskAsSeen()
+            loadTaskLogs()
+        }
+    }
+
+    private fun showLoading(show: Boolean) {
+        progressBar.visibility = if (show) View.VISIBLE else View.GONE
     }
 
     override fun onResume() {
@@ -159,21 +185,18 @@ class TaskDetailActivity : AppCompatActivity() {
         if (!isArchived) {
             when (task.status) {
                 "4" -> {
-                    // فقط مسئول کار
                     if (isResponsible) {
                         buttonMode = "REQUEST_COMPLETE"
                         onButtonClick = { completeTask() }
                     }
                 }
                 "41" -> {
-                    // فقط سرشیفت (حتی اگر خودش مسئول باشد)
                     if (userRole == Config.RoleCode.SUPERVISOR) {
                         buttonMode = "FINAL_REVIEW"
                         onButtonClick = { completeTask() }
                     }
                 }
-                else -> { // 1,2,3
-                    // فقط مسئول کار
+                else -> {
                     if (isResponsible) {
                         buttonMode = "ADD_LOG"
                         onButtonClick = { startAddLogActivity() }
@@ -199,6 +222,7 @@ class TaskDetailActivity : AppCompatActivity() {
         )
         recyclerView.adapter = adapter
     }
+
     private fun startAddLogActivity(log: TaskLogModel? = null) {
         val intent = Intent(this, AddLogActivity::class.java).apply {
             if (log != null) {

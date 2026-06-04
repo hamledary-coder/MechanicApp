@@ -41,4 +41,8 @@
         <item name="android:textColor">#FFFFFF</item>
     </style>
 
+    <style name="Theme.MechanicApp.Rtl" parent="Theme.MechanicApp">
+        <item name="android:layoutDirection">rtl</item>
+    </style>
+
 </resources>

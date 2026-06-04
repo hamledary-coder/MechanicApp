@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.Mechanic.Workshop.R
-import com.Mechanic.Workshop.ui.task.list.TaskAdapter
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.task.create.CreateTaskActivity
 import com.Mechanic.Workshop.ui.task.repository.TaskRepository
@@ -25,6 +24,7 @@ import com.Mechanic.Workshop.ui.task.dialog.InviteDialog
 import com.Mechanic.Workshop.ui.referral.ReferDialog
 import com.Mechanic.Workshop.ui.task.detail.TaskDetailActivity
 import com.Mechanic.Workshop.utils.ActivityLogger
+import com.Mechanic.Workshop.utils.UserCache
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
@@ -39,7 +39,6 @@ class WorkListFragment : Fragment() {
     private lateinit var loadingLayout: LinearLayout
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var taskRepository: TaskRepository
-    //private val onItemClick: ((TaskModel) -> Unit)? = null
 
     companion object {
         @JvmStatic
@@ -75,10 +74,8 @@ class WorkListFragment : Fragment() {
             fetchTasks()
         }
 
-        // ✅ ابتدا کش، بعد دریافت کارها
-        fetchAndCacheUsersWithCallback {
-            fetchTasks()
-        }
+        // بارگذاری تسک‌ها (UserCache قبلاً در LoginActivity مقداردهی شده)
+        fetchTasks()
     }
 
     override fun onResume() {
@@ -96,7 +93,6 @@ class WorkListFragment : Fragment() {
         val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
         val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
 
-        // اضافه کردن userId به URL برای دریافت has_unseen_report
         val url = "${Config.Endpoints.TASKS}&_=$timestamp&userId=$currentUserId"
         hideEmptyState()
 
@@ -115,12 +111,6 @@ class WorkListFragment : Fragment() {
 
                     try {
                         val jsonArray = JSONArray(response)
-                        fetchAndCacheUsers()
-
-                        if (status?.trim() == "کارتابل من" || status?.trim() == "در حال انجام") {
-                            fetchAndCacheUsers()
-                        }
-
                         taskList.clear()
 
                         for (i in 0 until jsonArray.length()) {
@@ -199,7 +189,6 @@ class WorkListFragment : Fragment() {
                                             }
                                         }
                                         else -> {
-                                            // حالت پیش‌فرض (امنیتی)
                                             if (task.assignedTo.split(",").contains(currentUserRowId)) {
                                                 taskList.add(task)
                                             }
@@ -209,58 +198,16 @@ class WorkListFragment : Fragment() {
                             }
                         }
 
+                        // پیش‌بارگذاری اسامی کاربران در UserCache
+                        if (taskList.isNotEmpty()) {
+                            UserCache.preloadFromTasks(taskList)
+                        }
+
                         if (taskList.isEmpty()) {
                             showEmptyState()
                         } else {
                             hideEmptyState()
-
-                            when (status?.trim()) {
-                                "اقدام نشده" -> {
-                                    adapter = ExpandableTaskAdapter(
-                                        tasks = taskList,
-                                        tabType = "unassigned",
-                                        onEditClick = { task -> openEditTask(task) },
-                                        onDeleteClick = { task -> deleteTask(task) },
-                                        onReferClick = { task -> referTask(task) },
-                                        onVolunteerClick = { task -> volunteerTask(task) }
-                                    )
-                                }
-                                "در حال انجام" -> {
-                                    adapter = ExpandableTaskAdapter(
-                                        tasks = taskList,
-                                        tabType = "inProgress",
-                                        onEditClick = { task -> openEditTask(task) },
-                                        onDeleteClick = { task -> deleteTask(task) },
-                                        onReferClick = { task -> referTask(task) },
-                                        onVolunteerClick = { task -> volunteerTask(task) },
-                                        onItemClick = { task -> openTaskDetail(task) }
-                                    )
-                                }
-                                "کارتابل من" -> {
-                                    adapter = ExpandableTaskAdapter(
-                                        tasks = taskList,
-                                        tabType = "myCartable",
-                                        onEditClick = { task -> openEditTask(task) },
-                                        onDeleteClick = { task -> deleteTask(task) },
-                                        onReferClick = { task -> referTask(task) },
-                                        onVolunteerClick = { task -> volunteerTask(task) },
-                                        onItemClick = { task -> openTaskDetail(task) }
-                                    )
-                                }
-                                else -> {
-                                    adapter = ExpandableTaskAdapter(
-                                        tasks = taskList,
-                                        tabType = "unassigned",
-                                        onEditClick = { task -> openEditTask(task) },
-                                        onDeleteClick = { task -> deleteTask(task) },
-                                        onReferClick = { task -> referTask(task) },
-                                        onVolunteerClick = { task -> volunteerTask(task) }
-                                    )
-                                }
-                            }
-
-                            recyclerView.adapter = adapter
-                            adapter.notifyDataSetChanged()
+                            setupAdapter()
                         }
 
                     } catch (e: Exception) {
@@ -280,6 +227,55 @@ class WorkListFragment : Fragment() {
         Volley.newRequestQueue(requireContext()).add(stringRequest)
     }
 
+    private fun setupAdapter() {
+        when (status?.trim()) {
+            "اقدام نشده" -> {
+                adapter = ExpandableTaskAdapter(
+                    tasks = taskList,
+                    tabType = "unassigned",
+                    onEditClick = { task -> openEditTask(task) },
+                    onDeleteClick = { task -> deleteTask(task) },
+                    onReferClick = { task -> referTask(task) },
+                    onVolunteerClick = { task -> volunteerTask(task) }
+                )
+            }
+            "در حال انجام" -> {
+                adapter = ExpandableTaskAdapter(
+                    tasks = taskList,
+                    tabType = "inProgress",
+                    onEditClick = { task -> openEditTask(task) },
+                    onDeleteClick = { task -> deleteTask(task) },
+                    onReferClick = { task -> referTask(task) },
+                    onVolunteerClick = { task -> volunteerTask(task) },
+                    onItemClick = { task -> openTaskDetail(task) }
+                )
+            }
+            "کارتابل من" -> {
+                adapter = ExpandableTaskAdapter(
+                    tasks = taskList,
+                    tabType = "myCartable",
+                    onEditClick = { task -> openEditTask(task) },
+                    onDeleteClick = { task -> deleteTask(task) },
+                    onReferClick = { task -> referTask(task) },
+                    onVolunteerClick = { task -> volunteerTask(task) },
+                    onItemClick = { task -> openTaskDetail(task) }
+                )
+            }
+            else -> {
+                adapter = ExpandableTaskAdapter(
+                    tasks = taskList,
+                    tabType = "unassigned",
+                    onEditClick = { task -> openEditTask(task) },
+                    onDeleteClick = { task -> deleteTask(task) },
+                    onReferClick = { task -> referTask(task) },
+                    onVolunteerClick = { task -> volunteerTask(task) }
+                )
+            }
+        }
+        recyclerView.adapter = adapter
+        adapter.notifyDataSetChanged()
+    }
+
     // ویرایش کار
     private fun openEditTask(task: TaskModel) {
         val intent = Intent(requireContext(), CreateTaskActivity::class.java)
@@ -288,7 +284,6 @@ class WorkListFragment : Fragment() {
         intent.putExtra("TITLE", task.title)
         intent.putExtra("DESC", task.description)
         intent.putExtra("UNIT", task.unit)
-        // فیلدهای جدید
         intent.putExtra("SUB_UNIT", task.sub_unit)
         intent.putExtra("DECLARATION_METHOD", task.declaration_method)
         intent.putExtra("REQUESTER", task.requester)
@@ -299,7 +294,6 @@ class WorkListFragment : Fragment() {
         intent.putExtra("OLD_TITLE", task.title)
         intent.putExtra("OLD_UNIT", task.unit)
         intent.putExtra("OLD_PRIORITY", task.priority)
-// در صورت نیاز سایر فیلدها
         startActivity(intent)
     }
 
@@ -312,21 +306,21 @@ class WorkListFragment : Fragment() {
         intent.putExtra("CREATOR", task.creator)
         intent.putExtra("DATE", task.createDate)
         intent.putExtra("RESPONSIBLE", task.responsible)
-        intent.putExtra("ASSIGNED_TO", task.assignedTo)           // ← اضافه کن
+        intent.putExtra("ASSIGNED_TO", task.assignedTo)
         intent.putExtra("UNIT", task.unit)
-        intent.putExtra("PRIORITY", task.priority)               // ← اضافه کن
-        intent.putExtra("SUB_UNIT", task.sub_unit)               // ← اضافه کن
-        intent.putExtra("DECLARATION_METHOD", task.declaration_method) // ← اضافه کن
-        intent.putExtra("REQUESTER", task.requester)             // ← اضافه کن
+        intent.putExtra("PRIORITY", task.priority)
+        intent.putExtra("SUB_UNIT", task.sub_unit)
+        intent.putExtra("DECLARATION_METHOD", task.declaration_method)
+        intent.putExtra("REQUESTER", task.requester)
         intent.putExtra("REQUEST_DATE", task.request_date)
-        intent.putExtra("INITIAL_REVIEW", task.initial_review)   // ← اضافه کن
-        intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number) // ← اضافه کن
-        intent.putExtra("URGENCY", task.urgency)                 // ← اضافه کن (همان فوریت)
+        intent.putExtra("INITIAL_REVIEW", task.initial_review)
+        intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
+        intent.putExtra("URGENCY", task.urgency)
         intent.putExtra("REFERRED_BY", task.referredBy)
         startActivity(intent)
     }
 
-    // حذف کار (اصلاح شده با runOnUiThread)
+    // حذف کار
     private fun deleteTask(task: TaskModel) {
         AlertDialog.Builder(requireContext())
             .setTitle("حذف کار")
@@ -336,7 +330,6 @@ class WorkListFragment : Fragment() {
                     taskId = task.id,
                     onSuccess = {
                         requireActivity().runOnUiThread {
-                            // ثبت لاگ حذف
                             val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
                             val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
                             val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
@@ -366,11 +359,10 @@ class WorkListFragment : Fragment() {
             .show()
     }
 
-    // ارجاع کار (اصلاح شده با runOnUiThread)
+    // ارجاع کار
     private fun referTask(task: TaskModel) {
         val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
         val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "")
-        //val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID,"")
         val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
 
         if (userRole != Config.RoleCode.SUPERVISOR && userRole != Config.RoleCode.MANAGER) {
@@ -379,15 +371,13 @@ class WorkListFragment : Fragment() {
         }
 
         val referDialog = ReferDialog(
-            context = requireContext(),//
+            context = requireContext(),
             taskTitle = task.title,
             currentAssignees = task.assignedTo,
             currentResponsible = task.responsible
         )
 
         referDialog.setOnReferSubmitListener { assigneeIds, referralType, responsibleId ->
-
-            // ذخیره مقادیر قبلی برای لاگ
             val oldAssignees = task.assignedTo
             val oldResponsible = task.responsible
 
@@ -399,14 +389,14 @@ class WorkListFragment : Fragment() {
                 referredBy = currentUserId,
                 onSuccess = {
                     requireActivity().runOnUiThread {
-                        // ثبت لاگ ارجاع
                         val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
                         val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
 
-                        val assigneeNames = assigneeIds.split(",").mapNotNull { Config.UserCache.userMap[it] }.joinToString("، ")
-                        val responsibleName = Config.UserCache.userMap[responsibleId ?: ""] ?: "تعیین نشده"
-                        val oldAssigneeNames = oldAssignees.split(",").mapNotNull { Config.UserCache.userMap[it] }.joinToString("، ")
-                        val oldResponsibleName = Config.UserCache.userMap[oldResponsible] ?: "تعیین نشده"
+                        // استفاده از UserCache جدید برای گرفتن نام‌ها
+                        val assigneeNames = assigneeIds.split(",").mapNotNull { UserCache.getName(it) }.joinToString("، ")
+                        val responsibleName = if (responsibleId != null) UserCache.getName(responsibleId) else "تعیین نشده"
+                        val oldAssigneeNames = oldAssignees.split(",").mapNotNull { UserCache.getName(it) }.joinToString("، ")
+                        val oldResponsibleName = UserCache.getName(oldResponsible)
 
                         val description = "کار شماره ${task.id} با عنوان «${task.title}» توسط کاربر $userName ارجاع شد.\n" +
                                 "گروه قبلی: [$oldAssigneeNames] - گروه جدید: [$assigneeNames]\n" +
@@ -437,12 +427,11 @@ class WorkListFragment : Fragment() {
         Log.d("REFER_DEBUG", "ReferDialog shown")
     }
 
-    // داوطلب شدن (اصلاح شده با runOnUiThread)
+    // داوطلب شدن
     private fun volunteerTask(task: TaskModel) {
         val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
         val currentUserRowId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
 
-        // اگر مسئول دارد و کاربر فعلی مسئول نیست → فقط عضو گروه شود
         if (task.responsible.isNotEmpty() && task.responsible != currentUserRowId) {
             taskRepository.volunteer(
                 taskId = task.id,
@@ -460,9 +449,7 @@ class WorkListFragment : Fragment() {
                     }
                 }
             )
-        }
-        // اگر مسئول ندارد → خودش مسئول شود و دعوتنامه بفرستد
-        else if (task.responsible.isEmpty()) {
+        } else if (task.responsible.isEmpty()) {
             val inviteDialog = InviteDialog(requireContext(), taskRepository) { inviteeIds ->
                 if (inviteeIds.isNotEmpty()) {
                     taskRepository.volunteer(
@@ -516,53 +503,5 @@ class WorkListFragment : Fragment() {
     private fun hideEmptyState() {
         view?.findViewById<TextView>(R.id.emptyStateText)?.visibility = View.GONE
         recyclerView.visibility = View.VISIBLE
-    }
-
-    private fun fetchAndCacheUsers() {
-        val url = "${Config.BASE_URL}?action=getEmployees"
-
-        val request = StringRequest(
-            Request.Method.GET, url,
-            { response ->
-                try {
-                    val usersArray = JSONArray(response)
-                    for (i in 0 until usersArray.length()) {
-                        val obj = usersArray.getJSONObject(i)
-                        val rowId = obj.getString("rowId")
-                        val name = obj.getString("name")
-                        Config.UserCache.userMap[rowId] = name
-                    }
-                } catch (e: Exception) {
-                    Log.e("UserCache", "Error caching users: ${e.message}")
-                }
-            },
-            { error ->
-                Log.e("UserCache", "Network error: ${error.message}")
-            })
-
-        Volley.newRequestQueue(requireContext()).add(request)
-    }
-
-    private fun fetchAndCacheUsersWithCallback(onComplete: () -> Unit) {
-        val url = "${Config.BASE_URL}?action=getEmployees"
-        val request = StringRequest(
-            Request.Method.GET, url,
-            { response ->
-                try {
-                    val usersArray = JSONArray(response)
-                    for (i in 0 until usersArray.length()) {
-                        val obj = usersArray.getJSONObject(i)
-                        Config.UserCache.userMap[obj.getString("rowId")] = obj.getString("name")
-                    }
-                } catch (e: Exception) {
-                    Log.e("UserCache", "Error: ${e.message}")
-                }
-                onComplete()
-            },
-            { error ->
-                Log.e("UserCache", "Network error: ${error.message}")
-                onComplete()
-            })
-        Volley.newRequestQueue(requireContext()).add(request)
     }
 }

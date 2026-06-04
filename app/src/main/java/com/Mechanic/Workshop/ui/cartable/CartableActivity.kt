@@ -3,6 +3,7 @@ package com.Mechanic.Workshop.ui.cartable
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -25,6 +26,10 @@ class CartableActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_cartable)
+
+        // فقط این خط رو اضافه کنید - بدون هیچ Toolbar اضافی
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.title = "کارتابل تقسیم وظایف"
 
         val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
         viewPager = findViewById(R.id.viewPager)
@@ -70,6 +75,14 @@ class CartableActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         adapter.refreshAllFragments()
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == android.R.id.home) {
+            finish()
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     inner class ViewPagerAdapter(activity: AppCompatActivity) : FragmentStateAdapter(activity) {

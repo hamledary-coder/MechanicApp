@@ -1,277 +1,265 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
+    android:padding="16dp"
+    android:fillViewport="true"
     android:background="#F5F5F5"
     android:layoutDirection="rtl">
 
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="#2E7D32" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="16dp">
+        <!-- 1. تاریخ انجام -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="تاریخ انجام *"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
 
+        <EditText
+            android:id="@+id/etDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="۱۴۰۴/۰۲/۲۵"
+            android:focusable="false"
+            android:cursorVisible="false"
+            android:background="@android:drawable/editbox_background"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 2. زمان شروع و پایان -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <!-- 1. تاریخ انجام -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="تاریخ انجام *"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <EditText
-                android:id="@+id/etDate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="۱۴۰۴/۰۲/۲۵"
-                android:focusable="false"
-                android:cursorVisible="false"
-                android:background="@android:drawable/editbox_background"
-                android:padding="12dp"
-                android:layout_marginBottom="16dp" />
-
-            <!-- 2. زمان شروع و پایان -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="2"
-                android:layout_marginBottom="16dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginEnd="8dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="زمان شروع"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="4dp" />
-
-                    <EditText
-                        android:id="@+id/etStartTime"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="۰۹:۰۰"
-                        android:focusable="false"
-                        android:cursorVisible="false"
-                        android:background="@android:drawable/editbox_background"
-                        android:padding="12dp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="8dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="زمان پایان"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="4dp" />
-
-                    <EditText
-                        android:id="@+id/etEndTime"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="۱۲:۰۰"
-                        android:focusable="false"
-                        android:cursorVisible="false"
-                        android:background="@android:drawable/editbox_background"
-                        android:padding="12dp" />
-                </LinearLayout>
-
-            </LinearLayout>
-            <!-- بعد از فیلدهای زمان شروع و پایان -->
-            <TextView
-                android:id="@+id/tvDuration"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="مدت زمان: 0 ساعت و 0 دقیقه"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="#2E7D32"
-                android:padding="8dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"
-                android:visibility="gone" />
-
-            <!-- 3. گروه انجام‌دهنده -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="گروه انجام‌دهنده"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="16dp">
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginEnd="8dp">
 
                 <TextView
-                    android:id="@+id/tvGroupValue"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="در حال بارگیری..."
-                    android:padding="12dp"
-                    android:background="@android:drawable/editbox_background" />
+                    android:text="زمان شروع"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
 
-                <Button
-                    android:id="@+id/btnEditGroup"
-                    android:layout_width="wrap_content"
+                <EditText
+                    android:id="@+id/etStartTime"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="ویرایش"
-                    android:backgroundTint="#FF9800"
-                    android:layout_marginStart="8dp" />
-
+                    android:hint="۰۹:۰۰"
+                    android:focusable="false"
+                    android:cursorVisible="false"
+                    android:background="@android:drawable/editbox_background"
+                    android:padding="12dp" />
             </LinearLayout>
 
-            <!-- 4. شرح اقدام -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="شرح اقدام *"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <EditText
-                android:id="@+id/etActionDescription"
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:hint="متن گزارش..."
-                android:gravity="top"
-                android:inputType="textMultiLine"
-                android:background="@android:drawable/editbox_background"
-                android:padding="12dp"
-                android:layout_marginBottom="16dp" />
-
-            <!-- 5. وضعیت جدید کار -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="وضعیت جدید کار *"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <Spinner
-                android:id="@+id/spinnerNewStatus"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@android:drawable/editbox_background"
-                android:padding="8dp"
-                android:layout_marginBottom="8dp" />
-
-            <!-- کادر شرطی -->
-            <TextView
-                android:id="@+id/tvConditionalLabel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="شرح اقدام بعدی"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="4dp"
-                android:visibility="gone" />
-
-            <EditText
-                android:id="@+id/etConditionalText"
-                android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:hint="..."
-                android:gravity="top"
-                android:inputType="textMultiLine"
-                android:background="@android:drawable/editbox_background"
-                android:padding="12dp"
-                android:layout_marginBottom="16dp"
-                android:visibility="gone" />
-
-            <!-- 6. توضیحات تکمیلی -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="توضیحات تکمیلی"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <EditText
-                android:id="@+id/etNotes"
-                android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:hint="توضیحات اضافی..."
-                android:gravity="top"
-                android:inputType="textMultiLine"
-                android:background="@android:drawable/editbox_background"
-                android:padding="12dp"
-                android:layout_marginBottom="24dp" />
-
-            <Button
-                android:id="@+id/btnWorkCondition"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="شرایط محیط کار"
-                android:backgroundTint="#666664"
-                android:layout_marginBottom="16dp"
-                android:visibility="gone" />
-
-            <!-- دکمه‌ها -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="2"
-                android:layout_marginBottom="32dp">
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="8dp">
 
-                <Button
-                    android:id="@+id/btnSubmit"
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:text="ثبت گزارش"
-                    android:backgroundTint="#2E7D32" />
+                    android:text="زمان پایان"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
 
-                <Button
-                    android:id="@+id/btnCancel"
-                    android:layout_width="0dp"
+                <EditText
+                    android:id="@+id/etEndTime"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:text="انصراف"
-                    android:backgroundTint="#FF7043" />
-
+                    android:hint="۱۲:۰۰"
+                    android:focusable="false"
+                    android:cursorVisible="false"
+                    android:background="@android:drawable/editbox_background"
+                    android:padding="12dp" />
             </LinearLayout>
 
         </LinearLayout>
 
-    </ScrollView>
+        <!-- مدت زمان -->
+        <TextView
+            android:id="@+id/tvDuration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="مدت زمان: 0 ساعت و 0 دقیقه"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#2E7D32"
+            android:padding="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
 
-</LinearLayout>
+        <!-- 3. گروه انجام‌دهنده -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="گروه انجام‌دهنده"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:id="@+id/tvGroupValue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="در حال بارگیری..."
+                android:padding="12dp"
+                android:background="@android:drawable/editbox_background" />
+
+            <Button
+                android:id="@+id/btnEditGroup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ویرایش"
+                android:backgroundTint="#FF9800"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
+
+        <!-- 4. شرح اقدام -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="شرح اقدام *"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <EditText
+            android:id="@+id/etActionDescription"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:hint="متن گزارش..."
+            android:gravity="top"
+            android:inputType="textMultiLine"
+            android:background="@android:drawable/editbox_background"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 5. وضعیت جدید کار -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="وضعیت جدید کار *"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/spinnerNewStatus"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@android:drawable/editbox_background"
+            android:padding="8dp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- کادر شرطی -->
+        <TextView
+            android:id="@+id/tvConditionalLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="شرح اقدام بعدی"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/etConditionalText"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:hint="..."
+            android:gravity="top"
+            android:inputType="textMultiLine"
+            android:background="@android:drawable/editbox_background"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
+
+        <!-- 6. توضیحات تکمیلی -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="توضیحات تکمیلی"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <EditText
+            android:id="@+id/etNotes"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:hint="توضیحات اضافی..."
+            android:gravity="top"
+            android:inputType="textMultiLine"
+            android:background="@android:drawable/editbox_background"
+            android:padding="12dp"
+            android:layout_marginBottom="24dp" />
+
+        <Button
+            android:id="@+id/btnWorkCondition"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="شرایط محیط کار"
+            android:backgroundTint="#666664"
+            android:layout_marginBottom="16dp" />
+
+        <!-- دکمه‌ها -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginBottom="32dp">
+
+            <Button
+                android:id="@+id/btnSubmit"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="ثبت گزارش"
+                android:backgroundTint="#2E7D32" />
+
+            <Button
+                android:id="@+id/btnCancel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="انصراف"
+                android:backgroundTint="#FF7043" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

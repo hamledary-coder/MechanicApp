@@ -25,11 +25,15 @@
         </activity>
 
         <activity android:name=".ui.home.HomeActivity" />
-        <activity android:name=".ui.cartable.CartableActivity" />
+        <activity
+            android:name=".ui.cartable.CartableActivity"
+            android:theme="@style/Theme.MechanicApp.Rtl" />
         <activity android:name=".ui.task.create.CreateTaskActivity" />
+
         <activity
             android:name=".ui.archive.ArchiveActivity"
             android:theme="@style/Theme.MechanicApp.NoActionBar" />
+
         <activity
             android:name=".ui.task.complete.CompleteTaskActivity"
             android:theme="@style/Theme.MechanicApp.NoActionBar" />
@@ -38,7 +42,13 @@
             android:name=".ui.task.detail.TaskDetailActivity"
             android:theme="@style/Theme.MechanicApp.NoActionBar" />
 
-        <activity android:name=".ui.task.log.AddLogActivity" />
+        <activity android:name=".ui.task.log.AddLogActivity"
+            android:theme="@style/Theme.MechanicApp.Rtl"/>
+
+        <!-- ✅ اضافه شد: SettingsActivity -->
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:theme="@style/Theme.MechanicApp.NoActionBar" />
 
     </application>
 

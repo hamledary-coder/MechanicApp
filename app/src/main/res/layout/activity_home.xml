@@ -24,6 +24,8 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <!-- ❌ حذف شد: دکمه خروج -->
+        <!--
         <Button
             android:id="@+id/btnLogout"
             android:layout_width="wrap_content"
@@ -31,10 +33,20 @@
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:text="خروج"
-            android:visibility="gone"
+            android:visibility="visible"
             android:backgroundTint="#D32F2F"
             android:textSize="12sp" />
+        -->
+
     </RelativeLayout>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_margin="16dp"
+        android:visibility="gone" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -46,11 +58,11 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- کارت کارتابل -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardCartable"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
-                android:layout_marginTop="8dp"
                 android:layout_marginBottom="16dp"
                 app:cardCornerRadius="15dp"
                 app:cardElevation="6dp"
@@ -58,6 +70,7 @@
                 android:focusable="true"
                 android:foreground="?android:attr/selectableItemBackground">
 
+                <!-- محتوای کارت کارتابل -->
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
@@ -98,11 +111,11 @@
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 
+            <!-- کارت بایگانی -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardArchive"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
-                android:layout_marginTop="8dp"
                 android:layout_marginBottom="16dp"
                 app:cardCornerRadius="15dp"
                 app:cardElevation="6dp"
@@ -149,6 +162,68 @@
 
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
+
+            <!-- کارت تنظیمات -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="15dp"
+                app:cardElevation="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_settings"
+                        app:tint="#2E7D32" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="تنظیمات"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:textColor="#2E7D32" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="تغییر رمز عبور، اطلاعات کاربری و خروج"
+                            android:textColor="#757575"
+                            android:textSize="14sp"
+                            android:layout_marginTop="4dp" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_chevron_left"
+                        app:tint="#999" />
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

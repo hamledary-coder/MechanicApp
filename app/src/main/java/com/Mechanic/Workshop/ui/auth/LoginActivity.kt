@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.Mechanic.Workshop.ui.home.HomeActivity
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
+import com.Mechanic.Workshop.utils.UserCache
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -24,17 +25,17 @@ import java.io.IOException
 
 class LoginActivity : AppCompatActivity() {
 
-    // 🔴 تغییر این خط
     private val loginUrl = Config.Endpoints.LOGIN
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ۱. چک کردن لاگین قبلی
-        // 🔴 تغییر این خط
+        // مقداردهی اولیه UserCache
+        UserCache.init(this)
+
+        // چک کردن لاگین قبلی
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
         if (sharedPref.contains(Config.PrefKeys.PERSONNEL_ID)) {
-            // اگر قبلاً لاگین کرده، مستقیماً به کارتابل برو
             val intent = Intent(this, HomeActivity::class.java)
             startActivity(intent)
             finish()
@@ -70,8 +71,6 @@ class LoginActivity : AppCompatActivity() {
         json.put("password", pass)
 
         val body = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-
-        // 🔴 تغییر این خط
         val request = Request.Builder().url(loginUrl).post(body).build()
 
         client.newCall(request).enqueue(object : Callback {
@@ -86,11 +85,9 @@ class LoginActivity : AppCompatActivity() {
             override fun onResponse(call: Call, response: Response) {
                 val resBody = response.body?.string()
                 val code = response.code
-                // لاگ برای عیب‌یابی (در Logcat ببینید)
-                println("Login Response: $resBody")
+
                 Log.d("LOGIN_TEST", "HTTP Code: $code")
                 Log.d("LOGIN_TEST", "Raw Response: $resBody")
-                Log.d("LOGIN_TEST", "Response length: ${resBody?.length}")
                 Log.d("LOGIN_URL", "Login URL: $loginUrl")
                 Log.d("LOGIN_JSON", "Sending: $json")
 
@@ -102,19 +99,29 @@ class LoginActivity : AppCompatActivity() {
 
                         if (jsonRes.optString("status") == "success") {
                             val name = jsonRes.optString("name", "کاربر")
-                            val role = jsonRes.optString("role", "3")  // کد 3 = employee
-                            val rowId = jsonRes.optString("rowId", "") // کد ردیف از سرور برگشته
+                            val role = jsonRes.optString("role", "3")
+                            val rowId = jsonRes.optString("rowId", "")
+                            val userId = jsonRes.optString("rowId", pId)
 
                             val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
                             sharedPref.edit()
-                                .putString(Config.PrefKeys.PERSONNEL_ID, pId)  // شماره پرسنلی
-                                .putString(Config.PrefKeys.USER_ROW_ID, rowId) // کد ردیف ✅ جدید
+                                .putString(Config.PrefKeys.PERSONNEL_ID, pId)
+                                .putString(Config.PrefKeys.USER_ROW_ID, rowId)
                                 .putString(Config.PrefKeys.USERNAME, name)
                                 .putString(Config.PrefKeys.USER_ROLE, role)
                                 .commit()
 
+                            // ذخیره نام کاربر فعلی در UserCache
+                            UserCache.addUser(userId, name)
+
+                            // بارگذاری همه کاربران در پس‌زمینه
+                            UserCache.loadAllUsers {
+                                Log.d("UserCache", "All users loaded successfully")
+                                UserCache.printCache()
+                            }
+
                             Toast.makeText(this@LoginActivity, "خوش آمدید $name", Toast.LENGTH_LONG).show()
-                            // انتقال به صفحه کارتابل
+
                             val intent = Intent(this@LoginActivity, HomeActivity::class.java)
                             startActivity(intent)
                             finish()
