@@ -4,226 +4,281 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5"
-    android:layoutDirection="rtl">
+    android:background="@color/background_light">
 
-    <RelativeLayout
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:background="#2E7D32"
-        android:padding="16dp">
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
         <TextView
-            android:id="@+id/tvWelcomeHome"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:layout_alignParentStart="true"
-            android:text="خوش آمدید"
-            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:text="تعمیرات مکانیک"
+            android:textColor="@android:color/white"
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <!-- ❌ حذف شد: دکمه خروج -->
-        <!--
-        <Button
-            android:id="@+id/btnLogout"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:text="خروج"
-            android:visibility="visible"
-            android:backgroundTint="#D32F2F"
-            android:textSize="12sp" />
-        -->
+    </androidx.appcompat.widget.Toolbar>
 
-    </RelativeLayout>
-
+    <!-- ProgressBar -->
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_margin="16dp"
+        android:layout_marginTop="32dp"
         android:visibility="gone" />
 
+    <!-- محتوای اصلی با اسکرول -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="24dp">
 
-            <!-- کارت کارتابل -->
+            <!-- کارت خوش‌آمدگویی -->
             <androidx.cardview.widget.CardView
-                android:id="@+id/cardCartable"
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="15dp"
-                app:cardElevation="6dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?android:attr/selectableItemBackground">
-
-                <!-- محتوای کارت کارتابل -->
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="16dp">
-
-                    <ImageView
-                        android:id="@+id/imgIcon"
-                        android:layout_width="60dp"
-                        android:layout_height="60dp"
-                        android:layout_alignParentStart="true"
-                        android:layout_centerVertical="true"
-                        android:src="@android:drawable/ic_dialog_email"
-                        app:tint="#2E7D32" />
-
-                    <TextView
-                        android:id="@+id/txtTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_toEndOf="@id/imgIcon"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginTop="8dp"
-                        android:text="کارتابل کارها"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:textColor="#2E7D32"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_toEndOf="@id/imgIcon"
-                        android:layout_below="@id/txtTitle"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginTop="4dp"
-                        android:text="مشاهده و انتخاب دستور کارهای جدید"
-                        android:textColor="#757575"
-                        android:textSize="14sp"/>
-
-                </RelativeLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- کارت بایگانی -->
-            <androidx.cardview.widget.CardView
-                android:id="@+id/cardArchive"
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="15dp"
-                app:cardElevation="6dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?android:attr/selectableItemBackground">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="16dp">
-
-                    <ImageView
-                        android:id="@+id/imgArchiveIcon"
-                        android:layout_width="60dp"
-                        android:layout_height="60dp"
-                        android:layout_alignParentStart="true"
-                        android:layout_centerVertical="true"
-                        android:src="@drawable/ic_archive"
-                        app:tint="#757575" />
-
-                    <TextView
-                        android:id="@+id/txtArchiveTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_toEndOf="@id/imgArchiveIcon"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginTop="8dp"
-                        android:text="بایگانی"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:textColor="#757575"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_toEndOf="@id/imgArchiveIcon"
-                        android:layout_below="@id/txtArchiveTitle"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginTop="4dp"
-                        android:text="مشاهده کارهای بایگانی شده"
-                        android:textColor="#757575"
-                        android:textSize="14sp"/>
-
-                </RelativeLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- کارت تنظیمات -->
-            <androidx.cardview.widget.CardView
-                android:id="@+id/cardSettings"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="15dp"
-                app:cardElevation="6dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?android:attr/selectableItemBackground">
+                android:layout_marginBottom="40dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="4dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:orientation="vertical"
+                    android:padding="24dp">
 
-                    <ImageView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:src="@drawable/ic_settings"
-                        app:tint="#2E7D32" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="16dp">
+                        android:text="👋 خوش آمدید،"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_secondary" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="تنظیمات"
-                            android:textSize="20sp"
-                            android:textStyle="bold"
-                            android:textColor="#2E7D32" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="تغییر رمز عبور، اطلاعات کاربری و خروج"
-                            android:textColor="#757575"
-                            android:textSize="14sp"
-                            android:layout_marginTop="4dp" />
-
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_chevron_left"
-                        app:tint="#999" />
+                    <TextView
+                        android:id="@+id/tvWelcomeHome"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="کاربر عزیز"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary" />
 
                 </LinearLayout>
-
             </androidx.cardview.widget.CardView>
+
+            <!-- سطر اول کارت‌ها (کارتابل و بایگانی) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="32dp">
+
+                <!-- کارت کارتابل -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardCartable"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="24dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="32dp"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📋"
+                            android:textSize="44sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="کارتابل"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+
+                        <TextView
+                            android:id="@+id/tvCartableCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="۰ کار"
+                            android:textSize="14sp"
+                            android:textColor="@color/primary_blue" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- کارت بایگانی -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardArchive"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="24dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="32dp"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📦"
+                            android:textSize="44sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="بایگانی"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="کارهای بسته شده"
+                            android:textSize="14sp"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- سطر دوم کارت‌ها (تنظیمات و گفتگو) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <!-- کارت تنظیمات -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardSettings"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="24dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="32dp"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⚙️"
+                            android:textSize="44sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="تنظیمات"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="تنظیمات برنامه"
+                            android:textSize="14sp"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- کارت گفتگو -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardChat"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="24dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="32dp"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="💬"
+                            android:textSize="44sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="گفتگو"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="ارسال پیام"
+                            android:textSize="14sp"
+                            android:textColor="@color/primary_blue" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
+
 </LinearLayout>

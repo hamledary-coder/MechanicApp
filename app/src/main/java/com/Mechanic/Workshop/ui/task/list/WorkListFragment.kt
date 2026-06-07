@@ -74,7 +74,7 @@ class WorkListFragment : Fragment() {
             fetchTasks()
         }
 
-        // بارگذاری تسک‌ها (UserCache قبلاً در LoginActivity مقداردهی شده)
+        // بارگذاری کار‌ها (UserCache قبلاً در LoginActivity مقداردهی شده)
         fetchTasks()
     }
 

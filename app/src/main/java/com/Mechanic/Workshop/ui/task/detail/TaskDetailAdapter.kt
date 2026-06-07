@@ -120,6 +120,7 @@ class TaskDetailAdapter(
         }
     }
 
+
     // ViewHolder برای شرح کار
     class TaskInfoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val tvId: TextView = itemView.findViewById(R.id.tvTaskId)
@@ -135,6 +136,7 @@ class TaskDetailAdapter(
         private val tvInitialReview: TextView = itemView.findViewById(R.id.tvInitialReview)
         private val tvUrgency: TextView = itemView.findViewById(R.id.tvTaskUrgency)
         private val tvReferredBy: TextView = itemView.findViewById(R.id.tvReferredBy)
+        private val seenByContainer: LinearLayout = itemView.findViewById(R.id.seenByContainer)
 
         fun bind(task: TaskModel) {
             tvId.text = "شماره کار: ${task.id}"
@@ -231,7 +233,92 @@ class TaskDetailAdapter(
             } else {
                 tvReferredBy.visibility = View.GONE
             }
+
+            // نمایش تیک‌های مشاهده کنندگان
+            displaySeenBy(task.seenBy)
         }
+
+        private fun displaySeenBy(seenBy: List<String>) {
+            seenByContainer.removeAllViews()
+
+            if (seenBy.isEmpty()) {
+                seenByContainer.visibility = View.GONE
+                return
+            }
+
+            seenByContainer.visibility = View.VISIBLE
+
+            val maxDisplay = 6
+            val toShow = seenBy.take(maxDisplay)
+            val remaining = seenBy.size - maxDisplay
+
+            toShow.forEach { userId ->
+                val userName = UserCache.getName(userId)
+                val firstLetter = if (userName.isNotEmpty() && userName != "نامشخص")
+                    userName.firstOrNull()?.toString()?.uppercase() ?: "?"
+                else "?"
+
+                val circleView = createCircleWithLetter(firstLetter, userId)
+                seenByContainer.addView(circleView)
+            }
+
+            if (remaining > 0) {
+                val moreView = TextView(itemView.context).apply {
+                    text = "+$remaining"
+                    textSize = 10f
+                    setTextColor(Color.GRAY)
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        gravity = Gravity.CENTER_VERTICAL
+                        marginStart = 4.dpToPx()
+                    }
+                }
+                seenByContainer.addView(moreView)
+            }
+        }
+
+        private fun createCircleWithLetter(letter: String, userId: String): View {
+            return TextView(itemView.context).apply {
+                text = letter
+                textSize = 10f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+
+                val size = 20.dpToPx()
+                layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                    marginEnd = 4.dpToPx()
+                }
+
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(getColorForUserId(userId))
+                }
+
+                // اضافه کردن Tooltip برای نمایش نام کامل وقتی طولانی نگه می‌دارند
+                val userName = UserCache.getName(userId)
+                if (userName.isNotEmpty() && userName != "نامشخص") {
+                    setOnLongClickListener {
+                        Toast.makeText(context, userName, Toast.LENGTH_SHORT).show()
+                        true
+                    }
+                }
+            }
+        }
+
+        private fun getColorForUserId(userId: String): Int {
+            val colors = listOf(
+                "#E91E63", "#9C27B0", "#673AB7", "#3F51B5",
+                "#2196F3", "#03A9F4", "#00BCD4", "#009688",
+                "#4CAF50", "#8BC34A", "#CDDC39", "#FFEB3B",
+                "#FFC107", "#FF9800", "#FF5722", "#795548"
+            )
+            val index = userId.hashCode().mod(colors.size)
+            return Color.parseColor(colors[index])
+        }
+
+        private fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
     }
 
     // ViewHolder برای هر گزارش
@@ -443,6 +530,8 @@ class TaskDetailAdapter(
                 divider.visibility = View.VISIBLE
                 detailLayout.visibility = View.VISIBLE
 
+                displaySeenBy(currentLog.seenBy)
+
                 // ثبت دیده شدن گزارش
                 if (::currentUserId.isInitialized && currentUserId.isNotEmpty()) {
                     SeenManager.markAsSeen(
@@ -631,26 +720,26 @@ class TaskDetailAdapter(
             val container = itemView.findViewById<LinearLayout>(R.id.seenByContainer)
             container.removeAllViews()
 
+            if (seenBy.isEmpty()) return
+
             val maxDisplay = 6
             val toShow = seenBy.take(maxDisplay)
             val remaining = seenBy.size - maxDisplay
 
             toShow.forEach { userId ->
-                val userColor = getColorForUserId(userId)
-                val tickView = ImageView(itemView.context).apply {
-                    setImageResource(R.drawable.ic_check)
-                    setColorFilter(userColor, android.graphics.PorterDuff.Mode.SRC_IN)
-                    layoutParams = LinearLayout.LayoutParams(12.dpToPx(), 12.dpToPx()).apply {
-                        marginEnd = 0
-                    }
-                }
-                container.addView(tickView)
+                val userName = UserCache.getName(userId)
+                val firstLetter = if (userName.isNotEmpty() && userName != "نامشخص")
+                    userName.firstOrNull()?.toString()?.uppercase() ?: "?"
+                else "?"
+
+                val circleView = createSmallCircleWithLetter(firstLetter, userId)
+                container.addView(circleView)
             }
 
             if (remaining > 0) {
                 val moreView = TextView(itemView.context).apply {
                     text = "+$remaining"
-                    textSize = 10f
+                    textSize = 9f
                     setTextColor(Color.BLACK)
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -661,6 +750,25 @@ class TaskDetailAdapter(
                     }
                 }
                 container.addView(moreView)
+            }
+        }
+
+        private fun createSmallCircleWithLetter(letter: String, userId: String): View {
+            return TextView(itemView.context).apply {
+                text = letter
+                textSize = 8f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+
+                val size = 16.dpToPx()
+                layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                    marginEnd = 2.dpToPx()
+                }
+
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(getColorForUserId(userId))
+                }
             }
         }
 

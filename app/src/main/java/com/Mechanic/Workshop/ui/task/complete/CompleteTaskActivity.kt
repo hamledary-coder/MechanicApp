@@ -18,6 +18,7 @@ import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.cartable.CartableActivity
 import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
+import com.Mechanic.Workshop.utils.UserCache
 import com.Mechanic.Workshop.utils.VolleySingleton
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
@@ -45,14 +46,20 @@ class CompleteTaskActivity : AppCompatActivity() {
     companion object {
         private const val STATUS_IN_PROGRESS = "2"
         private const val STATUS_REQUEST_COMPLETE = "4"
-        private const val STATUS_SENT_TO_SUPERVISOR = "41"   // ✅ جدید
-        private const val STATUS_ARCHIVED = "5"             // ✅ جدید
+        private const val STATUS_SENT_TO_SUPERVISOR = "41"
+        private const val STATUS_ARCHIVED = "5"
         private const val STATUS_REJECTED = "22"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_complete_task)
+
+        // مقداردهی اولیه UserCache (اگر قبلاً نشده)
+        if (UserCache.getSize() == 0) {
+            UserCache.init(applicationContext)
+        }
+
         setupToolbar()
         initViews()
         loadIntentData()
@@ -105,15 +112,12 @@ class CompleteTaskActivity : AppCompatActivity() {
     private fun setupButtonsByRoleAndStatus() {
         when {
             isEmployeeRequestingCompletion() -> {
-                // کارمند: نمایش دکمه اعلام اتمام کار
                 setupEmployeeCompletion()
             }
             isSupervisorApproving() -> {
-                // سرشیفت: نمایش دکمه تأیید و برگشت
                 setupSupervisorApproval()
             }
             else -> {
-                // حالت پیش‌فرض (امنیتی)
                 setupDefaultCompletion()
             }
         }
@@ -121,11 +125,9 @@ class CompleteTaskActivity : AppCompatActivity() {
 
     private fun isEmployeeRequestingCompletion(): Boolean =
         userRole == Config.RoleCode.EMPLOYEE && (currentStatus == STATUS_IN_PROGRESS || currentStatus == STATUS_REQUEST_COMPLETE)
-    // ✅ اضافه شد: || currentStatus == STATUS_REQUEST_COMPLETE
 
     private fun isSupervisorApproving(): Boolean =
         userRole == Config.RoleCode.SUPERVISOR && currentStatus == STATUS_SENT_TO_SUPERVISOR
-    // ✅ باید STATUS_SENT_TO_SUPERVISOR باشد (41) نه STATUS_REQUEST_COMPLETE (4)
 
     private fun setupEmployeeCompletion() {
         showConfirmButton("اعلام اتمام کار") { completeTaskAsResponsible() }
@@ -163,7 +165,12 @@ class CompleteTaskActivity : AppCompatActivity() {
             taskId = taskId,
             onSuccess = { logs ->
                 if (logs.isNotEmpty()) {
-                    calculateAndDisplay(logs)
+                    // اول همه کاربران رو از سرور بارگذاری کن، بعد نمایش بده
+                    UserCache.loadAllUsers {
+                        runOnUiThread {
+                            calculateAndDisplay(logs)
+                        }
+                    }
                 } else {
                     Toast.makeText(this, "گزارشی برای این کار وجود ندارد", Toast.LENGTH_SHORT).show()
                     finish()
@@ -283,8 +290,30 @@ class CompleteTaskActivity : AppCompatActivity() {
     private fun displayUserStatsTable(userStats: Map<String, UserStats>) {
         tableContent.removeAllViews()
 
+        // اگر کاربری در کش نیست، اول همه رو بارگذاری کن
+        val missingUsers = userStats.keys.filter { !UserCache.hasUser(it) && it.isNotEmpty() && it != "0" }
+        if (missingUsers.isNotEmpty()) {
+            UserCache.loadAllUsers {
+                runOnUiThread {
+                    displayUserStatsTableInternal(userStats)
+                }
+            }
+        } else {
+            displayUserStatsTableInternal(userStats)
+        }
+    }
+
+    private fun displayUserStatsTableInternal(userStats: Map<String, UserStats>) {
+        tableContent.removeAllViews()
+
         for ((userId, stats) in userStats) {
-            val userName = Config.UserCache.userMap[userId] ?: "کاربر $userId"
+            // گرفتن نام کاربر از UserCache
+            val userName = if (userId.isNotEmpty() && userId != "0") {
+                UserCache.getName(userId)
+            } else {
+                "نامشخص"
+            }
+
             val duration = stats.totalDuration
             val avgHeat = if (duration > 0) stats.weightedHeat / duration else 0.0
             val avgPollution = if (duration > 0) stats.weightedPollution / duration else 0.0

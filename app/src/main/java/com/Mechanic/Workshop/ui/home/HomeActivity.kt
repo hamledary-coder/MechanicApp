@@ -2,124 +2,128 @@ package com.Mechanic.Workshop.ui.home
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
-import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.cardview.widget.CardView
-import com.Mechanic.Workshop.ui.cartable.CartableActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.cardview.widget.CardView  // ← تغییر: استفاده از CardView به جای MaterialCardView
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.archive.ArchiveActivity
-import com.Mechanic.Workshop.ui.auth.LoginActivity
+import com.Mechanic.Workshop.ui.cartable.CartableActivity
 import com.Mechanic.Workshop.ui.settings.SettingsActivity
+import com.Mechanic.Workshop.utils.UserCache
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
-import org.json.JSONArray
 
 class HomeActivity : AppCompatActivity() {
 
+    private lateinit var toolbar: Toolbar
     private lateinit var progressBar: ProgressBar
-    private lateinit var cardCartable: CardView
-    private lateinit var cardArchive: CardView
-    private lateinit var cardSettings: CardView
     private lateinit var tvWelcome: TextView
-    private lateinit var btnLogout: Button
+    private lateinit var tvCartableCount: TextView
+    private lateinit var cardCartable: CardView      // ← تغییر
+    private lateinit var cardArchive: CardView       // ← تغییر
+    private lateinit var cardSettings: CardView      // ← تغییر
+    private lateinit var cardChat: CardView          // ← تغییر
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
         initViews()
+        setupToolbar()
+        loadUserData()
+        setupClickListeners()
+        loadCartableTasksCount()
+    }
 
-        // نمایش loading و غیرفعال کردن کارت‌ها تا دریافت کاربران
+    private fun initViews() {
+        toolbar = findViewById(R.id.toolbar)
+        progressBar = findViewById(R.id.progressBar)
+        tvWelcome = findViewById(R.id.tvWelcomeHome)
+        tvCartableCount = findViewById(R.id.tvCartableCount)
+        cardCartable = findViewById(R.id.cardCartable)
+        cardArchive = findViewById(R.id.cardArchive)
+        cardSettings = findViewById(R.id.cardSettings)
+        cardChat = findViewById(R.id.cardChat)
+    }
+
+    private fun setupToolbar() {
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayShowTitleEnabled(false)
+    }
+
+    private fun loadUserData() {
+        val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+        val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+        tvWelcome.text = userName
+
         showLoading(true)
-        setCardsEnabled(false)
+        disableCards(true)
 
-        // دریافت کاربران و بعد نمایش صفحه
-        fetchAndCacheUsers {
+        UserCache.init(this)
+        UserCache.loadAllUsers {
             runOnUiThread {
                 showLoading(false)
-                setupUI()
-                setCardsEnabled(true)
+                disableCards(false)
             }
         }
     }
 
-    private fun initViews() {
-        progressBar = findViewById(R.id.progressBar)
-        tvWelcome = findViewById(R.id.tvWelcomeHome)
-        //btnLogout = findViewById(R.id.btnLogout)
-        cardCartable = findViewById(R.id.cardCartable)
-        cardArchive = findViewById(R.id.cardArchive)
-        cardSettings = findViewById(R.id.cardSettings)
+    private fun loadCartableTasksCount() {
+        val url = "${Config.BASE_URL}?action=getTasksCount&status=1,2,3"
+
+        val request = StringRequest(
+            Request.Method.GET, url,
+            { response ->
+                try {
+                    val count = response.toIntOrNull() ?: 0
+                    runOnUiThread {
+                        tvCartableCount.text = if (count > 0) "$count کار جدید" else "۰ کار"
+                    }
+                } catch (e: Exception) {
+                    tvCartableCount.text = "۰ کار"
+                }
+            },
+            { error ->
+                tvCartableCount.text = "۰ کار"
+            }
+        )
+
+        Volley.newRequestQueue(this).add(request)
+    }
+
+    private fun setupClickListeners() {
+        cardCartable.setOnClickListener {
+            startActivity(Intent(this, CartableActivity::class.java))
+        }
+
+        cardArchive.setOnClickListener {
+            startActivity(Intent(this, ArchiveActivity::class.java))
+        }
+
+        cardSettings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+        cardChat.setOnClickListener {
+            Toast.makeText(this, "بخش گفتگو در حال توسعه است", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showLoading(show: Boolean) {
         progressBar.visibility = if (show) android.view.View.VISIBLE else android.view.View.GONE
     }
 
-    private fun setCardsEnabled(enabled: Boolean) {
-        cardCartable.isEnabled = enabled
-        cardArchive.isEnabled = enabled
-        cardSettings.isEnabled = enabled
-
-        val alpha = if (enabled) 1.0f else 0.5f
-        cardCartable.alpha = alpha
-        cardArchive.alpha = alpha
-        cardSettings.alpha = alpha
-    }
-
-    private fun setupUI() {
-        val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
-        val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر")
-        tvWelcome.text = "خوش آمدید، $userName عزیز"
-
-
-
-        cardCartable.setOnClickListener {
-            val intent = Intent(this, CartableActivity::class.java)
-            startActivity(intent)
+    private fun disableCards(disable: Boolean) {
+        val cards = listOf(cardCartable, cardArchive, cardSettings, cardChat)
+        val alpha = if (disable) 0.5f else 1.0f
+        cards.forEach { card ->
+            card.isEnabled = !disable
+            card.alpha = alpha
         }
-
-        cardArchive.setOnClickListener {
-            val intent = Intent(this, ArchiveActivity::class.java)
-            startActivity(intent)
-        }
-
-        cardSettings.setOnClickListener {
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivity(intent)
-        }
-    }
-
-    private fun fetchAndCacheUsers(onComplete: () -> Unit) {
-        val url = "${Config.Endpoints.TASKS}?action=getEmployees"
-        val request = StringRequest(
-            Request.Method.GET, url,
-            { response ->
-                try {
-                    val usersArray = JSONArray(response)
-                    Config.UserCache.userMap.clear() // جلوگیری از دوبارگی
-                    for (i in 0 until usersArray.length()) {
-                        val obj = usersArray.getJSONObject(i)
-                        val rowId = obj.getString("rowId")
-                        val name = obj.getString("name")
-                        Config.UserCache.userMap[rowId] = name
-                    }
-                    Log.d("UserCache", "تعداد کاربران کش شده: ${Config.UserCache.userMap.size}")
-                } catch (e: Exception) {
-                    Log.e("UserCache", "Error caching users: ${e.message}")
-                } finally {
-                    onComplete()
-                }
-            },
-            { error ->
-                Log.e("UserCache", "Network error: ${error.message}")
-                onComplete() // حتی با خطا ادامه بده
-            })
-        Volley.newRequestQueue(this).add(request)
     }
 }

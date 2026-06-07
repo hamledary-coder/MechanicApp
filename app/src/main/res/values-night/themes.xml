@@ -1,7 +1,20 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.MechanicApp" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+    <style name="Theme.MechanicApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- رنگ‌های تیره -->
+        <item name="colorPrimary">#1565C0</item>
+        <item name="colorPrimaryVariant">#0D47A1</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <item name="colorSecondary">#00796B</item>
+        <item name="colorOnSecondary">@color/white</item>
+
+        <!-- پس‌زمینه تیره -->
+        <item name="android:windowBackground">#121212</item>
+        <item name="colorSurface">#1E1E1E</item>
+        <item name="colorOnSurface">#E0E0E0</item>
+
+        <item name="android:fontFamily">@font/vazirmatn</item>
+        <item name="android:statusBarColor">#0D47A1</item>
+        <item name="android:layoutDirection">rtl</item>
     </style>
 </resources>

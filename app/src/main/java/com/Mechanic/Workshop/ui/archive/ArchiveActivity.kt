@@ -19,6 +19,7 @@ import android.util.Log
 import org.json.JSONArray
 import org.json.JSONException
 
+@Suppress("DEPRECATION")
 class ArchiveActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
@@ -107,7 +108,7 @@ class ArchiveActivity : AppCompatActivity() {
             UserCache.preloadFromTasks(tasksList)
 
             if (tasksList.isEmpty()) {
-                Toast.makeText(this, "هیچ تسک بایگانی شده‌ای یافت نشد", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "هیچ کار بایگانی شده‌ای یافت نشد", Toast.LENGTH_SHORT).show()
             }
 
             setupAdapter()
@@ -128,16 +129,16 @@ class ArchiveActivity : AppCompatActivity() {
             tasks = tasksList,
             tabType = "archived",
             onEditClick = { task ->
-                Toast.makeText(this, "تسک‌های بایگانی شده قابل ویرایش نیستند", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "کار‌های بایگانی شده قابل ویرایش نیستند", Toast.LENGTH_SHORT).show()
             },
             onDeleteClick = { task ->
-                Toast.makeText(this, "تسک‌های بایگانی شده قابل حذف نیستند", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "کار‌های بایگانی شده قابل حذف نیستند", Toast.LENGTH_SHORT).show()
             },
             onReferClick = { task ->
-                Toast.makeText(this, "تسک‌های بایگانی شده قابل ارجاع نیستند", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "کار‌های بایگانی شده قابل ارجاع نیستند", Toast.LENGTH_SHORT).show()
             },
             onVolunteerClick = { task ->
-                Toast.makeText(this, "تسک‌های بایگانی شده قابل داوطلبی نیستند", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "کار‌های بایگانی شده قابل داوطلبی نیستند", Toast.LENGTH_SHORT).show()
             },
             onItemClick = { task -> openTaskDetail(task) }
         )

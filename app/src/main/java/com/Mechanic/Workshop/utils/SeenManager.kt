@@ -10,8 +10,17 @@ import org.json.JSONObject
 
 object SeenManager {
 
-    fun markAsSeen(context: Context, userId: String, items: List<SeenItem>) {
-        if (items.isEmpty()) return
+    fun markAsSeen(
+        context: Context,
+        userId: String,
+        items: List<SeenItem>,
+        onSuccess: (() -> Unit)? = null,
+        onError: ((String) -> Unit)? = null
+    ) {
+        if (items.isEmpty()) {
+            onSuccess?.invoke()
+            return
+        }
 
         val json = JSONObject().apply {
             put("action", "markAsSeen")
@@ -30,9 +39,11 @@ object SeenManager {
             Request.Method.POST, Config.BASE_URL, json,
             { response ->
                 Log.d("SeenManager", "Marked as seen: ${items.size} items - $response")
+                onSuccess?.invoke()
             },
             { error ->
                 Log.e("SeenManager", "Error: ${error.message}")
+                onError?.invoke(error.message ?: "Unknown error")
             }
         )
         VolleySingleton.getInstance(context).add(request)

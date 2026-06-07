@@ -1,8 +1,11 @@
 package com.Mechanic.Workshop.ui.settings
 
+import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -18,9 +21,10 @@ import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import org.json.JSONObject
 
+@Suppress("DEPRECATION")
 class SettingsActivity : AppCompatActivity() {
 
-    private lateinit var sharedPref: android.content.SharedPreferences
+    private lateinit var sharedPref: SharedPreferences
 
     // ویوها
     private lateinit var toolbar: Toolbar
@@ -36,7 +40,7 @@ class SettingsActivity : AppCompatActivity() {
 
         initViews()
 
-        sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+        sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
 
         setupToolbar()
         setupClickListeners()
@@ -88,9 +92,9 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showChangePasswordDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_change_password, null)
-        val etCurrentPassword = dialogView.findViewById<android.widget.EditText>(R.id.etCurrentPassword)
-        val etNewPassword = dialogView.findViewById<android.widget.EditText>(R.id.etNewPassword)
-        val etConfirmPassword = dialogView.findViewById<android.widget.EditText>(R.id.etConfirmPassword)
+        val etCurrentPassword = dialogView.findViewById<EditText>(R.id.etCurrentPassword)
+        val etNewPassword = dialogView.findViewById<EditText>(R.id.etNewPassword)
+        val etConfirmPassword = dialogView.findViewById<EditText>(R.id.etConfirmPassword)
 
         AlertDialog.Builder(this)
             .setTitle("تغییر رمز عبور")
@@ -123,7 +127,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun changePassword(currentPassword: String, newPassword: String) {
         val personnelId = sharedPref.getString(Config.PrefKeys.PERSONNEL_ID, "") ?: ""
 
-        val progressDialog = android.app.ProgressDialog(this).apply {
+        val progressDialog: ProgressDialog = ProgressDialog(this).apply {
             setMessage("در حال تغییر رمز عبور...")
             setCancelable(false)
             show()
@@ -132,7 +136,7 @@ class SettingsActivity : AppCompatActivity() {
         val url = "${Config.BASE_URL}?action=changePassword"
 
         val request = object : StringRequest(
-            Request.Method.POST, url,
+            Method.POST, url,
             { response ->
                 progressDialog.dismiss()
                 try {

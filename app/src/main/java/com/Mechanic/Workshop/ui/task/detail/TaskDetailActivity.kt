@@ -1,5 +1,6 @@
 package com.Mechanic.Workshop.ui.task.detail
 
+import TaskModel
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -11,7 +12,6 @@ import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.ui.task.log.AddLogActivity
 import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
-import TaskModel
 import android.util.Log
 import android.view.View
 import com.Mechanic.Workshop.ui.task.complete.CompleteTaskActivity
@@ -22,7 +22,6 @@ import com.Mechanic.Workshop.utils.UserCache
 import com.Mechanic.Workshop.utils.VolleySingleton
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
-import com.android.volley.toolbox.StringRequest
 import org.json.JSONArray
 
 class TaskDetailActivity : AppCompatActivity() {
@@ -33,10 +32,6 @@ class TaskDetailActivity : AppCompatActivity() {
     private val logsList = mutableListOf<TaskLogModel>()
     private lateinit var taskLogRepository: TaskLogRepository
     private lateinit var progressBar: View
-
-    companion object {
-        private const val STATUS_REQUEST_COMPLETE = "4"
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,16 +48,12 @@ class TaskDetailActivity : AppCompatActivity() {
                     setupToolbar()
                     initViews()
                     loadTaskData()
-                    markTaskAsSeen()
-                    loadTaskLogs()
                 }
             }
         } else {
             setupToolbar()
             initViews()
             loadTaskData()
-            markTaskAsSeen()
-            loadTaskLogs()
         }
     }
 
@@ -72,7 +63,10 @@ class TaskDetailActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        loadTaskLogs()
+        if (::task.isInitialized) {
+            // به جای loadTaskLogs، کل task را از سرور می‌گیریم تا seenBy هم به‌روز شود
+            fetchFullTaskFromServer()
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -97,7 +91,8 @@ class TaskDetailActivity : AppCompatActivity() {
     }
 
     private fun loadTaskData() {
-        task = TaskModel(
+        // ساخت task موقتی با داده‌های Intent
+        val tempTask = TaskModel(
             id = intent.getStringExtra("TASK_ID") ?: "",
             createDate = intent.getStringExtra("DATE") ?: "",
             title = intent.getStringExtra("TITLE") ?: "",
@@ -118,12 +113,64 @@ class TaskDetailActivity : AppCompatActivity() {
             system_request_number = intent.getStringExtra("SYSTEM_REQUEST_NUMBER") ?: "",
             referredBy = intent.getStringExtra("REFERRED_BY") ?: ""
         )
+        task = tempTask
+
+        // گرفتن اطلاعات کامل از سرور (شامل seenBy)
+        fetchFullTaskFromServer()
     }
 
-    private fun markTaskAsSeen() {
+    private fun getCurrentUserId(): String {
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
-        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
-        SeenManager.markAsSeen(this, currentUserId, listOf(SeenItem("TASK", task.id)))
+        return sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+    }
+
+    private fun fetchFullTaskFromServer() {
+        val url = "${Config.BASE_URL}?action=getTask&taskId=${task.id}"
+        val request = JsonObjectRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                try {
+                    val seenByArray = response.optJSONArray("seenBy") ?: JSONArray()
+                    val seenBy = (0 until seenByArray.length()).map { seenByArray.getString(it) }
+                    val hasUnseenReport = response.optBoolean("hasUnseenReport", false)
+                    val status = response.optString("status", task.status)
+
+                    task = task.copy(
+                        status = status,
+                        seenBy = seenBy,
+                        hasUnseenReport = hasUnseenReport
+                    )
+
+                    Log.d("TaskDetail", "Task updated from server - seenBy: $seenBy")
+
+                    val currentUserId = getCurrentUserId()
+                    val alreadySeen = task.seenBy.contains(currentUserId)
+
+                    // اگر کاربر قبلاً دیده بود یا الان داریم اعلام می‌کنیم
+                    if (currentUserId.isNotEmpty() && !alreadySeen) {
+                        // فقط اعلام کن، دوباره fetch نکن
+                        SeenManager.markAsSeen(this, currentUserId, listOf(SeenItem("TASK", task.id)))
+                        // برای نمایش، فعلاً همین seenBy خالی را نشان بده
+                        // (بعداً با onResume یا Pull-to-Refresh بروز می‌شود)
+                    }
+
+                    // همیشه آداپتر و لاگ‌ها را نشان بده (مهم)
+                    setupAdapter()
+                    loadTaskLogs()
+
+                } catch (e: Exception) {
+                    Log.e("TaskDetail", "Error parsing task: ${e.message}")
+                    setupAdapter()
+                    loadTaskLogs()
+                }
+            },
+            { error ->
+                Log.e("TaskDetail", "Error fetching task: ${error.message}")
+                setupAdapter()
+                loadTaskLogs()
+            }
+        )
+        VolleySingleton.getInstance(this).add(request)
     }
 
     private fun loadTaskLogs() {
@@ -146,32 +193,14 @@ class TaskDetailActivity : AppCompatActivity() {
     private fun updateLogsAndStatus(logs: List<TaskLogModel>) {
         logsList.clear()
         logsList.addAll(logs)
-
-        // دریافت وضعیت واقعی تسک از سرور
-        fetchTaskStatus { taskStatus ->
-            task = task.copy(status = taskStatus)
-            setupAdapter()
-        }
-    }
-
-    private fun fetchTaskStatus(callback: (String) -> Unit) {
-        val url = "${Config.BASE_URL}?action=getTask&taskId=${task.id}"
-        val request = JsonObjectRequest(
-            Request.Method.GET, url, null,
-            { response ->
-                callback(response.optString("status", "1"))
-            },
-            { error ->
-                Log.e("TaskDetail", "Error fetching task status: ${error.message}")
-                callback(logsList.lastOrNull()?.newStatus ?: "1")
-            }
-        )
-        VolleySingleton.getInstance(this).add(request)
+        setupAdapter()
     }
 
     private fun setupAdapter() {
+        if (!::task.isInitialized) return
+
+        val currentUserId = getCurrentUserId()
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
-        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
         val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
 
         val hasCompletionLog = logsList.any { it.newStatus == "4" || it.newStatus == "41" }

@@ -167,7 +167,7 @@ object UserCache {
         Volley.newRequestQueue(context).add(request)
     }
 
-    // پیش‌بارگذاری از روی لیست تسک‌ها (برای Fragment و Activity)
+    // پیش‌بارگذاری از روی لیست کار‌ها (برای Fragment و Activity)
     fun preloadFromTasks(tasks: List<TaskModel>) {
         val userIds = mutableSetOf<String>()
         tasks.forEach { task ->

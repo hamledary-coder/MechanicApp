@@ -36,6 +36,7 @@ import com.android.volley.toolbox.JsonObjectRequest
 import org.json.JSONObject
 
 
+@Suppress("DEPRECATION")
 class AddLogActivity : AppCompatActivity() {
 
     private lateinit var etActionDescription: EditText
