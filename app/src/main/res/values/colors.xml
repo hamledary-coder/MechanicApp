@@ -12,7 +12,7 @@
     <color name="primary_blue">#2196F3</color>      <!-- آبی اصلی -->
     <color name="primary_dark">#1976D2</color>      <!-- آبی تیره برای نوار وضعیت -->
     <color name="accent_teal">#009688</color>       <!-- آبی‌سبز برای دکمه‌ها -->
-    <color name="background_light">#FFF8E1</color><!-- پس‌زمینه روشن -->
+    <color name="background_light">#C0FFFFFF</color><!-- پس‌زمینه روشن -->
     <color name="card_background">#F5F5F5</color>   <!-- پس‌زمینه کارت‌ها -->
     <color name="text_primary">#212121</color>      <!-- متن اصلی -->
     <color name="text_secondary">#757575</color>    <!-- متن فرعی -->

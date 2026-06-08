@@ -53,14 +53,18 @@ class ExpandableTaskAdapter(
         val tvInitialReview: TextView = itemView.findViewById(R.id.tvInitialReview)
 
         val seenByContainer: LinearLayout = itemView.findViewById(R.id.seenByContainer)
+        val cardView: androidx.cardview.widget.CardView = itemView.findViewById(R.id.cardViewRoot)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_task_expandable, parent, false)
 
+
         val sharedPref = view.context.getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
         userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
+
+
 
         return ViewHolder(view)
     }
@@ -125,13 +129,13 @@ class ExpandableTaskAdapter(
     private fun setBackgroundColor(holder: ViewHolder, task: TaskModel) {
         when {
             task.hasUnseenReport && (userRole == Config.RoleCode.SUPERVISOR || userRole == Config.RoleCode.MANAGER) -> {
-                holder.itemView.setBackgroundColor(Color.parseColor("#E3F2FD"))
+                holder.cardView.setCardBackgroundColor(Color.parseColor("#E3F2FD"))  // آبی روشن
             }
             task.status == "41" && userRole == Config.RoleCode.SUPERVISOR -> {
-                holder.itemView.setBackgroundColor(Color.parseColor("#FFEBEE"))
+                holder.cardView.setCardBackgroundColor(Color.parseColor("#FFEBEE"))  // قرمز خیلی روشن
             }
             else -> {
-                holder.itemView.setBackgroundColor(Color.WHITE)
+                holder.cardView.setCardBackgroundColor(Color.WHITE)  // سفید
             }
         }
     }

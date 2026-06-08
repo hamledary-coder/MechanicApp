@@ -6,6 +6,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -65,6 +68,8 @@ class WorkListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setHasOptionsMenu(true)
+
         loadingLayout = view.findViewById(R.id.loadingLayout)
         swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout)
         recyclerView = view.findViewById(R.id.recyclerViewTasks)
@@ -76,6 +81,42 @@ class WorkListFragment : Fragment() {
 
         // بارگذاری کار‌ها (UserCache قبلاً در LoginActivity مقداردهی شده)
         fetchTasks()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.menu_work_list, menu)
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_sort -> {
+                showSortDialog()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun showSortDialog() {
+        val sortOptions = arrayOf(
+            "تاریخ (جدیدترین اول)",
+            "تاریخ (قدیمی‌ترین اول)",
+            "اولویت (بالا به پایین)",
+            "عنوان (الفبا)"
+        )
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("مرتب‌سازی بر اساس")
+            .setItems(sortOptions) { _, which ->
+                when (which) {
+                    0 -> sortTasksByDateNewest()
+                    1 -> sortTasksByDateOldest()
+                    2 -> sortTasksByPriority()
+                    3 -> sortTasksByTitle()
+                }
+            }
+            .show()
     }
 
     override fun onResume() {
@@ -503,5 +544,25 @@ class WorkListFragment : Fragment() {
     private fun hideEmptyState() {
         view?.findViewById<TextView>(R.id.emptyStateText)?.visibility = View.GONE
         recyclerView.visibility = View.VISIBLE
+    }
+
+    private fun sortTasksByDateNewest() {
+        taskList.sortByDescending { it.createDate }
+        adapter?.notifyDataSetChanged()
+    }
+
+    private fun sortTasksByDateOldest() {
+        taskList.sortBy { it.createDate }
+        adapter?.notifyDataSetChanged()
+    }
+
+    private fun sortTasksByPriority() {
+        taskList.sortByDescending { it.priority.toIntOrNull() ?: 0 }
+        adapter?.notifyDataSetChanged()
+    }
+
+    private fun sortTasksByTitle() {
+        taskList.sortBy { it.title }
+        adapter?.notifyDataSetChanged()
     }
 }

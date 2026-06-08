@@ -1,173 +1,175 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardViewRoot"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:layout_margin="8dp"
-    android:background="@drawable/card_background"
-    android:elevation="2dp">
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="#FFFFFF"
+    app:strokeColor="#FF0000"
+    app:strokeWidth="3dp">
 
-    <!-- Header: شماره/عنوان + سه نقطه (چپ) + فلش (راست) -->
     <LinearLayout
-        android:id="@+id/headerLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical"
-        android:layoutDirection="ltr"
-        android:background="?attr/selectableItemBackground">
+        android:orientation="vertical">
 
-        <!-- سه نقطه در سمت چپ -->
-        <ImageView
-            android:id="@+id/ivMenu"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_more_vert"
-            android:layout_marginEnd="8dp"/>
-
-        <!-- شماره کار -->
-        <TextView
-            android:id="@+id/tvTaskId"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="شماره: 123"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:layout_marginEnd="16dp"/>
-
-        <!-- عنوان کار (گرفتن فضای باقیمانده) -->
-        <TextView
-            android:id="@+id/tvTaskTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="عنوان کار"
-            android:textSize="14sp"/>
-
-        <!-- فلش اکسپند در سمت راست -->
-        <ImageView
-            android:id="@+id/ivExpand"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_chevron_down"
-            android:layout_marginStart="8dp"/>
-
-    </LinearLayout>
-
-    <View
-        android:id="@+id/divider"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E0E0E0"
-        android:visibility="gone" />
-
-    <!-- detailLayout (قسمت باز شونده) -->
-    <LinearLayout
-        android:id="@+id/detailLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/tvTaskDescription"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="توضیحات: ..."
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:id="@+id/tvTaskResponsible"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="مسئول: ..."
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:id="@+id/tvTaskAssignees"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="انجام‌دهندگان: ..."
-            android:layout_marginBottom="8dp" />
-
-        <!-- واحد و زیرمجموعه و اولویت -->
+        <!-- Header -->
         <LinearLayout
+            android:id="@+id/headerLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="4dp">
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:id="@+id/ivMenu"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_more_vert"
+                android:layout_marginEnd="8dp"/>
 
             <TextView
-                android:id="@+id/tvTaskUnit"
+                android:id="@+id/tvTaskId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="شماره: 123"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:layout_marginEnd="16dp"/>
+
+            <TextView
+                android:id="@+id/tvTaskTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="واحد: ..." />
+                android:text="عنوان کار"
+                android:textSize="14sp"/>
 
-            <TextView
-                android:id="@+id/tvTaskSubUnit"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="زیرمجموعه: ..." />
+            <ImageView
+                android:id="@+id/ivExpand"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_chevron_down"
+                android:layout_marginStart="8dp"/>
 
-            <TextView
-                android:id="@+id/tvTaskPriority"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="اهمیت: ..." />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvRequestDate"
+        <View
+            android:id="@+id/divider"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="تاریخ اعلام: ..."
-            android:layout_marginBottom="4dp" />
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:visibility="gone" />
 
-        <TextView
-            android:id="@+id/tvRequester"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="صادرکننده: ..."
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:id="@+id/tvDeclarationMethod"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="نحوه اعلام: ..."
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:id="@+id/tvSystemNumber"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="شماره سامانه: ..."
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:id="@+id/tvInitialReview"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="بررسی اولیه: ..."
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp" />
-
+        <!-- Detail Layout -->
         <LinearLayout
-            android:id="@+id/seenByContainer"
-            android:layout_width="wrap_content"
+            android:id="@+id/detailLayout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginStart="8dp" />
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
 
+            <TextView
+                android:id="@+id/tvTaskDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="توضیحات: ..."
+                android:layout_marginBottom="8dp" />
 
+            <TextView
+                android:id="@+id/tvTaskResponsible"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="مسئول: ..."
+                android:layout_marginBottom="4dp" />
 
+            <TextView
+                android:id="@+id/tvTaskAssignees"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="انجام‌دهندگان: ..."
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:id="@+id/tvTaskUnit"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="واحد: ..." />
+
+                <TextView
+                    android:id="@+id/tvTaskSubUnit"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="زیرمجموعه: ..." />
+
+                <TextView
+                    android:id="@+id/tvTaskPriority"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="اهمیت: ..." />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvRequestDate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="تاریخ اعلام: ..."
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvRequester"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="صادرکننده: ..."
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvDeclarationMethod"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="نحوه اعلام: ..."
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvSystemNumber"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="شماره سامانه: ..."
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvInitialReview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="بررسی اولیه: ..."
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:id="@+id/seenByContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-</LinearLayout>
+</androidx.cardview.widget.CardView>

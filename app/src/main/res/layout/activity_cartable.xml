@@ -9,10 +9,21 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/primary_blue"
         android:elevation="0dp"
-        app:elevation="0dp"
-        android:background="#2E7D32">  <!-- سبز -->
+        app:elevation="0dp">
 
+        <!-- تولبار جدید با دکمه Back -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="#470CCC"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            app:titleTextColor="@android:color/white"
+            app:title="کارتابل" />
+
+        <!-- TabLayout (همان قبلی) -->
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"
             android:layout_width="match_parent"
@@ -23,6 +34,7 @@
             app:tabBackground="@drawable/tab_background"
             app:tabIndicatorHeight="0dp"
             app:tabRippleColor="@android:color/transparent"/>
+
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.viewpager2.widget.ViewPager2
@@ -30,7 +42,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#FFF9E6"
-    app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fabAddTask"
