@@ -6,6 +6,9 @@ import android.content.res.Resources
 import android.view.LayoutInflater
 import android.view.View
 import android.graphics.Color
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -16,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.utils.UserCache  // ← اضافه کن
+import androidx.core.graphics.toColorInt
 
 class ExpandableTaskAdapter(
     private val tasks: List<TaskModel>,
@@ -45,15 +49,11 @@ class ExpandableTaskAdapter(
         val tvAssignees: TextView = itemView.findViewById(R.id.tvTaskAssignees)
         val tvUnit: TextView = itemView.findViewById(R.id.tvTaskUnit)
         val tvPriority: TextView = itemView.findViewById(R.id.tvTaskPriority)
-        val tvSubUnit: TextView = itemView.findViewById(R.id.tvTaskSubUnit)
         val tvRequestDate: TextView = itemView.findViewById(R.id.tvRequestDate)
         val tvRequester: TextView = itemView.findViewById(R.id.tvRequester)
         val tvDeclarationMethod: TextView = itemView.findViewById(R.id.tvDeclarationMethod)
         val tvSystemNumber: TextView = itemView.findViewById(R.id.tvSystemNumber)
         val tvInitialReview: TextView = itemView.findViewById(R.id.tvInitialReview)
-
-        val seenByContainer: LinearLayout = itemView.findViewById(R.id.seenByContainer)
-        val cardView: androidx.cardview.widget.CardView = itemView.findViewById(R.id.cardViewRoot)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -76,10 +76,13 @@ class ExpandableTaskAdapter(
         holder.tvId.text = "#${task.id}"
         holder.tvTitle.text = task.title
 
-        // تنظیم رنگ پس‌زمینه
-        setBackgroundColor(holder, task)
+        // تنظیم رنگ نوار
+        setStripColor(holder, task)
 
-        displaySeenBy(task.seenBy, holder.seenByContainer)
+        // ✅ تنظیم رنگ نوار بالایی (اضافه کن)
+        setTopStripColor(holder, task)
+
+
 
         if (isExpanded) {
             holder.ivExpand.setImageResource(R.drawable.ic_chevron_up)
@@ -126,20 +129,48 @@ class ExpandableTaskAdapter(
         }
     }
 
-    private fun setBackgroundColor(holder: ViewHolder, task: TaskModel) {
+    private fun setStripColor(holder: ViewHolder, task: TaskModel) {
+        val colorStrip = holder.itemView.findViewById<View>(R.id.colorStrip)
+
         when {
+            // گزارش جدید دارد → آبی
             task.hasUnseenReport && (userRole == Config.RoleCode.SUPERVISOR || userRole == Config.RoleCode.MANAGER) -> {
-                holder.cardView.setCardBackgroundColor(Color.parseColor("#E3F2FD"))  // آبی روشن
+                colorStrip.setBackgroundColor(Color.parseColor("#2196F3"))  // آبی
+                colorStrip.visibility = View.VISIBLE
             }
+            // درخواست تایید اتمام کار (status=41) → قرمز
             task.status == "41" && userRole == Config.RoleCode.SUPERVISOR -> {
-                holder.cardView.setCardBackgroundColor(Color.parseColor("#FFEBEE"))  // قرمز خیلی روشن
+                colorStrip.setBackgroundColor(Color.parseColor("#F44336"))  // قرمز
+                colorStrip.visibility = View.VISIBLE
             }
+            // حالت عادی → خاکستری
             else -> {
-                holder.cardView.setCardBackgroundColor(Color.WHITE)  // سفید
+                colorStrip.visibility = View.GONE
             }
         }
     }
 
+    private fun setTopStripColor(holder: ViewHolder, task: TaskModel) {
+        val topStrip = holder.itemView.findViewById<View>(R.id.topColorStrip)
+
+        // بررسی کن فوریت چقدر است
+        val urgency = task.urgency
+
+        when {
+            urgency == "خیلی زیاد" -> {
+                topStrip.setBackgroundColor("#F44336".toColorInt())  // قرمز
+                topStrip.visibility = View.VISIBLE
+            }
+            urgency == "زیاد" -> {
+                topStrip.setBackgroundColor("#FFCC80".toColorInt())  // نارنجی
+                topStrip.visibility = View.VISIBLE
+            }
+
+            else -> {
+                topStrip.visibility = View.GONE  // ← مخفی کن
+            }
+        }
+    }
     private fun setupMenu(holder: ViewHolder, task: TaskModel) {
         if (tabType != "archived" && (userRole == Config.RoleCode.MANAGER || userRole == Config.RoleCode.SUPERVISOR)) {
             holder.ivMenu.visibility = View.VISIBLE
@@ -187,16 +218,20 @@ class ExpandableTaskAdapter(
         // مخفی کردن همه فیلدها اول
         holder.tvDescription.visibility = View.GONE
         holder.tvAssignees.visibility = View.GONE
-        holder.tvSubUnit.visibility = View.GONE
         holder.tvRequestDate.visibility = View.GONE
         holder.tvRequester.visibility = View.GONE
         holder.tvDeclarationMethod.visibility = View.GONE
         holder.tvSystemNumber.visibility = View.GONE
         holder.tvInitialReview.visibility = View.GONE
+        // مخفی کردن دیوایدرها
+        holder.itemView.findViewById<View>(R.id.dividerDescription)?.visibility = View.GONE
+        holder.itemView.findViewById<View>(R.id.dividerAssignee)?.visibility = View.GONE
 
         // مسئول - استفاده از UserCache
+        // مسئول - با رنگ ملایم
+        // مسئول
         if (task.responsible.isNotEmpty() && task.responsible != "0") {
-            val responsibleName = UserCache.getName(task.responsible)  // ← تغییر
+            val responsibleName = UserCache.getName(task.responsible)
             holder.tvResponsible.text = "مسئول: $responsibleName"
             holder.tvResponsible.visibility = View.VISIBLE
         } else {
@@ -214,11 +249,16 @@ class ExpandableTaskAdapter(
             holder.tvAssignees.visibility = View.GONE
         }
 
-        // واحد
+        // واحد - نمایش مستقیم نام مجموعه
         if (task.unit.isNotEmpty() && task.unit != "null") {
             val unitText = Config.UnitCode.getText(task.unit)
             if (unitText.isNotEmpty()) {
-                holder.tvUnit.text = "واحد: $unitText"
+                // اگر واحد از نوع "مجموعه‌ها" است، مقدار sub_unit را نشان بده
+                if (task.unit == "مجموعه\u200Cها" && task.sub_unit.isNotEmpty()) {
+                    holder.tvUnit.text = "مجموعه: ${task.sub_unit}"
+                } else {
+                    holder.tvUnit.text = "واحد: $unitText"
+                }
                 holder.tvUnit.visibility = View.VISIBLE
             } else {
                 holder.tvUnit.visibility = View.GONE
@@ -230,6 +270,14 @@ class ExpandableTaskAdapter(
         // فوریت
         if (task.urgency.isNotEmpty() && task.urgency != "null" && task.urgency != "عادی") {
             holder.tvPriority.text = "فوریت: ${task.urgency}"
+
+            // ✅ شرط رنگ‌آمیزی همرنگ نوار
+            when (task.urgency) {
+                "خیلی زیاد" -> holder.tvPriority.setTextColor("#F44336".toColorInt())
+                "زیاد" -> holder.tvPriority.setTextColor("#FF9800".toColorInt())
+                else -> holder.tvPriority.setTextColor("#666666".toColorInt())
+            }
+
             holder.tvPriority.visibility = View.VISIBLE
         } else {
             holder.tvPriority.visibility = View.GONE
@@ -242,10 +290,35 @@ class ExpandableTaskAdapter(
         holder.tvDescription.text = task.description.ifEmpty { "توضیحاتی وارد نشده" }
         holder.tvDescription.visibility = View.VISIBLE
 
+        // نمایان کردن دیوایدرها
+        holder.itemView.findViewById<View>(R.id.dividerDescription)?.visibility = View.VISIBLE
+        holder.itemView.findViewById<View>(R.id.dividerAssignee)?.visibility = View.VISIBLE
+
         // مسئول - استفاده از UserCache
+        // مسئول - با رنگ ملایم
         if (task.responsible.isNotEmpty() && task.responsible != "0") {
-            val responsibleName = UserCache.getName(task.responsible)  // ← تغییر
-            holder.tvResponsible.text = "مسئول انجام کار: $responsibleName"
+            val responsibleName = UserCache.getName(task.responsible)
+
+            // ایجاد یک SpannableStringBuilder برای رنگ‌آمیزی
+            val text = SpannableStringBuilder("مسئول انجام کار: ")
+
+            // رنگ آبی تیره برای برچسب "مسئول:"
+            text.setSpan(
+                ForegroundColorSpan(Color.parseColor("#1565C0")),
+                0, text.length,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+
+            // اضافه کردن نام با رنگ تیره‌تر
+            val nameSpan = SpannableStringBuilder(responsibleName)
+            nameSpan.setSpan(
+                ForegroundColorSpan(Color.parseColor("#333333")),
+                0, nameSpan.length,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            text.append(nameSpan)
+
+            holder.tvResponsible.text = text
             holder.tvResponsible.visibility = View.VISIBLE
         } else {
             holder.tvResponsible.visibility = View.GONE
@@ -262,11 +335,15 @@ class ExpandableTaskAdapter(
             holder.tvAssignees.visibility = View.GONE
         }
 
-        // واحد
+        // واحد - نمایش مستقیم نام مجموعه
         if (task.unit.isNotEmpty() && task.unit != "null") {
             val unitText = Config.UnitCode.getText(task.unit)
             if (unitText.isNotEmpty()) {
-                holder.tvUnit.text = "واحد: $unitText"
+                if (task.unit == "مجموعه‌ها" && task.sub_unit.isNotEmpty()) {
+                    holder.tvUnit.text = "مجموعه: ${task.sub_unit}"
+                } else {
+                    holder.tvUnit.text = "واحد: $unitText"
+                }
                 holder.tvUnit.visibility = View.VISIBLE
             } else {
                 holder.tvUnit.visibility = View.GONE
@@ -275,17 +352,17 @@ class ExpandableTaskAdapter(
             holder.tvUnit.visibility = View.GONE
         }
 
-        // زیرمجموعه
-        if (task.sub_unit.isNotEmpty()) {
-            holder.tvSubUnit.text = "زیرمجموعه: ${task.sub_unit}"
-            holder.tvSubUnit.visibility = View.VISIBLE
-        } else {
-            holder.tvSubUnit.visibility = View.GONE
-        }
-
         // فوریت
         if (task.urgency.isNotEmpty() && task.urgency != "null" && task.urgency != "عادی") {
             holder.tvPriority.text = "فوریت: ${task.urgency}"
+
+            // ✅ شرط رنگ‌آمیزی همرنگ نوار
+            when (task.urgency) {
+                "خیلی زیاد" -> holder.tvPriority.setTextColor("#F44336".toColorInt())
+                "زیاد" -> holder.tvPriority.setTextColor("#FF9800".toColorInt())
+                else -> holder.tvPriority.setTextColor("#666666".toColorInt())
+            }
+
             holder.tvPriority.visibility = View.VISIBLE
         } else {
             holder.tvPriority.visibility = View.GONE
@@ -333,42 +410,7 @@ class ExpandableTaskAdapter(
         }
     }
 
-    private fun displaySeenBy(seenBy: List<String>, container: LinearLayout) {
-        container.removeAllViews()
 
-        val maxDisplay = 6
-        val toShow = seenBy.take(maxDisplay)
-        val remaining = seenBy.size - maxDisplay
-
-        toShow.forEach { userId ->
-            val userColor = getColorForUserId(userId)
-            val tickView = ImageView(container.context).apply {
-                setImageResource(R.drawable.ic_check)
-                setColorFilter(userColor, android.graphics.PorterDuff.Mode.SRC_IN)
-                layoutParams = LinearLayout.LayoutParams(12.dpToPx(), 12.dpToPx()).apply {
-                    marginEnd = 0
-                }
-            }
-            container.addView(tickView)
-        }
-
-        if (remaining > 0) {
-            val moreView = TextView(container.context).apply {
-                text = "+$remaining"
-                textSize = 10f
-                gravity = Gravity.CENTER
-                setTextColor(Color.BLACK)
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    marginEnd = 2.dpToPx()
-                    gravity = Gravity.CENTER_VERTICAL
-                }
-            }
-            container.addView(moreView)
-        }
-    }
 
     private fun getColorForUserId(userId: String): Int {
         val colors = listOf(

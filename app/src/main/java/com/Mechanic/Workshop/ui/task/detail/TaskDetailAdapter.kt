@@ -27,6 +27,7 @@ import android.util.Log
 import android.view.Gravity
 import android.graphics.Color
 import androidx.cardview.widget.CardView
+import com.Mechanic.Workshop.ui.task.log.TaskLogDetailActivity
 import com.Mechanic.Workshop.utils.SeenItem
 import com.Mechanic.Workshop.utils.SeenManager
 import com.Mechanic.Workshop.utils.UserCache
@@ -54,22 +55,32 @@ class TaskDetailAdapter(
 
     companion object {
         private const val TYPE_TASK_INFO = 0
-        private const val TYPE_TASK_LOG = 1
-        private const val TYPE_ADD_LOG = 2
+        private const val TYPE_ADD_LOG = 1      // ← جابه‌جا شد
+        private const val TYPE_TASK_LOG = 2
     }
 
     override fun getItemCount(): Int {
         val hasAddLog = buttonMode != "HIDDEN"
-        return 1 + logs.size + (if (hasAddLog) 1 else 0)
+        return 1 + (if (hasAddLog) 1 else 0) + logs.size  // info + addLog + logs
     }
 
     override fun getItemViewType(position: Int): Int {
+        val hasAddLog = buttonMode != "HIDDEN"
+
         return when (position) {
             0 -> TYPE_TASK_INFO
-            logs.size + 1 -> {
-                if (buttonMode != "HIDDEN") TYPE_ADD_LOG else -1
+            1 -> {
+                if (hasAddLog) TYPE_ADD_LOG else TYPE_TASK_LOG
             }
-            else -> TYPE_TASK_LOG
+            else -> {
+                if (hasAddLog) {
+                    // اگر addLog وجود داره، لاگ‌ها از ایندکس 2 شروع می‌شن
+                    TYPE_TASK_LOG
+                } else {
+                    // اگر addLog وجود نداره، لاگ‌ها از ایندکس 1 شروع می‌شن
+                    TYPE_TASK_LOG
+                }
+            }
         }
     }
 
@@ -79,11 +90,6 @@ class TaskDetailAdapter(
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_task_info_static, parent, false)
                 TaskInfoViewHolder(view)
-            }
-            TYPE_TASK_LOG -> {
-                val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_task_log, parent, false)
-                TaskLogViewHolder(view)
             }
             TYPE_ADD_LOG -> {
                 val view = LayoutInflater.from(parent.context)
@@ -98,23 +104,38 @@ class TaskDetailAdapter(
                     onButtonClick
                 )
             }
+            TYPE_TASK_LOG -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_task_log, parent, false)
+                TaskLogViewHolder(view)
+            }
             else -> throw IllegalArgumentException("Unknown view type")
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        val hasAddLog = buttonMode != "HIDDEN"
+
         when (holder) {
             is TaskInfoViewHolder -> holder.bind(task)
+            is AddLogViewHolder -> {
+                // کاری نداره، دکمه قبلاً در onCreateViewHolder ست شده
+            }
             is TaskLogViewHolder -> {
-                val log = logs[position - 1]
-                val sharedPref = holder.itemView.context.getSharedPreferences(
-                    Config.PrefKeys.USER_PREFS,
-                    Context.MODE_PRIVATE
-                )
-                val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
-                val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
-                holder.bind(log, task, currentUserId, userRole, onDeleteLogClick) {
-                    onRefreshLogs()
+                // محاسبه ایندکس صحیح لاگ
+                val addLogOffset = if (hasAddLog) 1 else 0
+                val logPosition = position - 1 - addLogOffset
+                if (logPosition in logs.indices) {
+                    val log = logs[logPosition]
+                    val sharedPref = holder.itemView.context.getSharedPreferences(
+                        Config.PrefKeys.USER_PREFS,
+                        Context.MODE_PRIVATE
+                    )
+                    val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+                    val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
+                    holder.bind(log, task, currentUserId, userRole, onDeleteLogClick) {
+                        onRefreshLogs()
+                    }
                 }
             }
         }
@@ -123,120 +144,150 @@ class TaskDetailAdapter(
 
     // ViewHolder برای شرح کار
     class TaskInfoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val tvId: TextView = itemView.findViewById(R.id.tvTaskId)
-        private val tvTitle: TextView = itemView.findViewById(R.id.tvTaskTitle)
-        private val tvDescription: TextView = itemView.findViewById(R.id.tvTaskDescription)
-        private val tvResponsible: TextView = itemView.findViewById(R.id.tvTaskResponsible)
-        private val tvAssignees: TextView = itemView.findViewById(R.id.tvTaskAssignees)
-        private val tvUnit: TextView = itemView.findViewById(R.id.tvTaskUnit)
+        // TextView‌ها
+        private val tvTaskId: TextView = itemView.findViewById(R.id.tvTaskId)
+        private val tvTaskTitle: TextView = itemView.findViewById(R.id.tvTaskTitle)
+        private val tvTaskDescription: TextView = itemView.findViewById(R.id.tvTaskDescription)
+        private val tvTaskResponsible: TextView = itemView.findViewById(R.id.tvTaskResponsible)
+        private val tvTaskAssignees: TextView = itemView.findViewById(R.id.tvTaskAssignees)
+        private val tvTaskUnit: TextView = itemView.findViewById(R.id.tvTaskUnit)
+        private val tvTaskUrgency: TextView = itemView.findViewById(R.id.tvTaskUrgency)
         private val tvRequestDate: TextView = itemView.findViewById(R.id.tvRequestDate)
         private val tvRequester: TextView = itemView.findViewById(R.id.tvRequester)
         private val tvDeclarationMethod: TextView = itemView.findViewById(R.id.tvDeclarationMethod)
         private val tvSystemNumber: TextView = itemView.findViewById(R.id.tvSystemNumber)
         private val tvInitialReview: TextView = itemView.findViewById(R.id.tvInitialReview)
-        private val tvUrgency: TextView = itemView.findViewById(R.id.tvTaskUrgency)
         private val tvReferredBy: TextView = itemView.findViewById(R.id.tvReferredBy)
         private val seenByContainer: LinearLayout = itemView.findViewById(R.id.seenByContainer)
 
-        fun bind(task: TaskModel) {
-            tvId.text = "شماره کار: ${task.id}"
-            tvTitle.text = "عنوان: ${task.title}"
-            tvDescription.text = "شرح: ${task.description.ifEmpty { "توضیحاتی وارد نشده" }}"
+        // Layoutهای جدید برای کنترل visibility
+        private val layoutResponsible: LinearLayout = itemView.findViewById(R.id.layoutResponsible)
+        private val layoutAssignees: LinearLayout = itemView.findViewById(R.id.layoutAssignees)
+        private val layoutUnit: LinearLayout = itemView.findViewById(R.id.layoutUnit)
+        private val layoutUrgency: LinearLayout = itemView.findViewById(R.id.layoutUrgency)
+        private val layoutRequestDate: LinearLayout = itemView.findViewById(R.id.layoutRequestDate)
+        private val layoutRequester: LinearLayout = itemView.findViewById(R.id.layoutRequester)
+        private val layoutDeclarationMethod: LinearLayout = itemView.findViewById(R.id.layoutDeclarationMethod)
+        private val layoutSystemNumber: LinearLayout = itemView.findViewById(R.id.layoutSystemNumber)
+        private val layoutReferredBy: LinearLayout = itemView.findViewById(R.id.layoutReferredBy)
 
-            // مسئول - استفاده از UserCache.getName
-            if (task.responsible.isNotEmpty()) {
-                val responsibleName = UserCache.getName(task.responsible)
-                tvResponsible.text = "مسئول: $responsibleName"
-                tvResponsible.visibility = View.VISIBLE
+        // CardView‌ها
+        private val cardDescription: CardView = itemView.findViewById(R.id.cardDescription)
+        private val cardInitialReview: CardView = itemView.findViewById(R.id.cardInitialReview)
+
+        fun bind(task: TaskModel) {
+            tvTaskId.text = "#${task.id}"
+            tvTaskTitle.text = task.title
+
+            // توضیحات
+            if (task.description.isNotEmpty()) {
+                tvTaskDescription.text = task.description
+                cardDescription.visibility = View.VISIBLE
             } else {
-                tvResponsible.visibility = View.GONE
+                cardDescription.visibility = View.GONE
             }
 
-            // گروه - استفاده از UserCache.getName
+            // مسئول
+            if (task.responsible.isNotEmpty() && task.responsible != "0") {
+                val responsibleName = UserCache.getName(task.responsible)
+                tvTaskResponsible.text = responsibleName
+                layoutResponsible.visibility = View.VISIBLE
+            } else {
+                layoutResponsible.visibility = View.GONE
+            }
+
+            // گروه انجام‌دهنده
             if (task.assignedTo.isNotEmpty()) {
                 val assigneeNames = task.assignedTo.split(",").map { it.trim() }
                     .filter { it.isNotEmpty() }
                     .map { UserCache.getName(it) }
-                tvAssignees.text = "گروه: ${assigneeNames.joinToString("، ")}"
-                tvAssignees.visibility = View.VISIBLE
+                tvTaskAssignees.text = assigneeNames.joinToString("، ")
+                layoutAssignees.visibility = View.VISIBLE
             } else {
-                tvAssignees.visibility = View.GONE
-            }
-
-            // فوریت
-            if (task.urgency.isNotEmpty() && task.urgency != "عادی") {
-                tvUrgency.text = "فوریت: ${task.urgency}"
-                tvUrgency.visibility = View.VISIBLE
-            } else {
-                tvUrgency.visibility = View.GONE
+                layoutAssignees.visibility = View.GONE
             }
 
             // واحد
             if (task.unit.isNotEmpty() && task.unit != "null") {
                 val unitText = Config.UnitCode.getText(task.unit)
                 if (unitText.isNotEmpty()) {
-                    tvUnit.text = "واحد: $unitText"
-                    tvUnit.visibility = View.VISIBLE
+                    tvTaskUnit.text = unitText
+                    layoutUnit.visibility = View.VISIBLE
                 } else {
-                    tvUnit.visibility = View.GONE
+                    layoutUnit.visibility = View.GONE
                 }
             } else {
-                tvUnit.visibility = View.GONE
+                layoutUnit.visibility = View.GONE
+            }
+
+            // فوریت
+            if (task.urgency.isNotEmpty() && task.urgency != "عادی") {
+                tvTaskUrgency.text = task.urgency
+                layoutUrgency.visibility = View.VISIBLE
+                // رنگ متن فوریت
+                when (task.urgency) {
+                    "خیلی زیاد" -> tvTaskUrgency.setTextColor(Color.parseColor("#D32F2F"))
+                    "زیاد" -> tvTaskUrgency.setTextColor(Color.parseColor("#FF9800"))
+                    else -> tvTaskUrgency.setTextColor(Color.parseColor("#333333"))
+                }
+            } else {
+                layoutUrgency.visibility = View.GONE
             }
 
             // تاریخ اعلام
             if (task.request_date.isNotEmpty()) {
                 val displayDate = task.request_date.replace("-", "/")
-                tvRequestDate.text = "تاریخ اعلام: $displayDate"
-                tvRequestDate.visibility = View.VISIBLE
+                tvRequestDate.text = displayDate
+                layoutRequestDate.visibility = View.VISIBLE
             } else {
-                tvRequestDate.visibility = View.GONE
+                layoutRequestDate.visibility = View.GONE
             }
 
             // صادرکننده
             if (task.requester.isNotEmpty()) {
-                tvRequester.text = "صادرکننده: ${task.requester}"
-                tvRequester.visibility = View.VISIBLE
+                tvRequester.text = task.requester
+                layoutRequester.visibility = View.VISIBLE
             } else {
-                tvRequester.visibility = View.GONE
+                layoutRequester.visibility = View.GONE
             }
 
             // نحوه اعلام
             if (task.declaration_method.isNotEmpty()) {
-                tvDeclarationMethod.text = "نحوه اعلام: ${task.declaration_method}"
-                tvDeclarationMethod.visibility = View.VISIBLE
+                tvDeclarationMethod.text = task.declaration_method
+                layoutDeclarationMethod.visibility = View.VISIBLE
             } else {
-                tvDeclarationMethod.visibility = View.GONE
+                layoutDeclarationMethod.visibility = View.GONE
             }
 
             // شماره سامانه
             if (task.system_request_number.isNotEmpty()) {
-                tvSystemNumber.text = "شماره سامانه: ${task.system_request_number}"
-                tvSystemNumber.visibility = View.VISIBLE
+                tvSystemNumber.text = task.system_request_number
+                layoutSystemNumber.visibility = View.VISIBLE
             } else {
-                tvSystemNumber.visibility = View.GONE
+                layoutSystemNumber.visibility = View.GONE
             }
 
             // بررسی اولیه
             if (task.initial_review.isNotEmpty()) {
-                tvInitialReview.text = "بررسی اولیه: ${task.initial_review}"
-                tvInitialReview.visibility = View.VISIBLE
+                tvInitialReview.text = task.initial_review
+                cardInitialReview.visibility = View.VISIBLE
             } else {
-                tvInitialReview.visibility = View.GONE
+                cardInitialReview.visibility = View.GONE
             }
 
-            // ارجاع‌دهنده - استفاده از UserCache.getName
+            // ارجاع‌دهنده
             if (task.referredBy.isNotEmpty()) {
                 val referredByName = UserCache.getName(task.referredBy)
-                tvReferredBy.text = "ارجاع‌دهنده: $referredByName"
-                tvReferredBy.visibility = View.VISIBLE
+                tvReferredBy.text = referredByName
+                layoutReferredBy.visibility = View.VISIBLE
             } else {
-                tvReferredBy.visibility = View.GONE
+                layoutReferredBy.visibility = View.GONE
             }
 
-            // نمایش تیک‌های مشاهده کنندگان
+            // مشاهده‌کنندگان
             displaySeenBy(task.seenBy)
         }
+
 
         private fun displaySeenBy(seenBy: List<String>) {
             seenByContainer.removeAllViews()
@@ -331,7 +382,7 @@ class TaskDetailAdapter(
         private val tvActionDescription: TextView = itemView.findViewById(R.id.tvActionDescription)
         private val tvDuration: TextView = itemView.findViewById(R.id.tvDuration)
         private val tvWorkers: TextView = itemView.findViewById(R.id.tvWorkers)
-        private val tvTime: TextView = itemView.findViewById(R.id.tvTime)
+        //private val tvTime: TextView = itemView.findViewById(R.id.tvTime)
         private val tvNewStatus: TextView = itemView.findViewById(R.id.tvNewStatus)
         private val tvLogNotes: TextView = itemView.findViewById(R.id.tvLogNotes)
         private val tvCommentLabel: TextView = itemView.findViewById(R.id.tvCommentLabel)
@@ -405,12 +456,7 @@ class TaskDetailAdapter(
                 tvWorkers.visibility = View.GONE
             }
 
-            if (log.startTime.isNotEmpty() || log.endTime.isNotEmpty()) {
-                tvTime.text = "زمان: ${log.startTime} - ${log.endTime}"
-                tvTime.visibility = View.VISIBLE
-            } else {
-                tvTime.visibility = View.GONE
-            }
+            //tvTime.visibility = View.GONE
 
             val durationText = if (log.startTime.isNotEmpty() && log.endTime.isNotEmpty()) {
                 try {
@@ -425,7 +471,14 @@ class TaskDetailAdapter(
 
                     val hours = durationMinutes / 60
                     val minutes = durationMinutes % 60
-                    "مدت زمان: $hours ساعت و $minutes دقیقه"
+
+                    // ساخت متن مدت زمان بدون نمایش "و صفر دقیقه"
+                    when {
+                        hours > 0 && minutes > 0 -> "مدت زمان: $hours ساعت و $minutes دقیقه"
+                        hours > 0 && minutes == 0 -> "مدت زمان: $hours ساعت"
+                        hours == 0 && minutes > 0 -> "مدت زمان: $minutes دقیقه"
+                        else -> ""
+                    }
                 } catch (e: Exception) {
                     ""
                 }
@@ -521,6 +574,17 @@ class TaskDetailAdapter(
                 }
             } else {
                 ivMenu.visibility = View.GONE
+            }
+
+            // بعد از setExpanded(isExpanded) یا در انتهای متد bind
+            itemView.setOnClickListener {
+                val context = itemView.context
+                val intent = Intent(context, TaskLogDetailActivity::class.java).apply {
+                    putExtra("TASK_ID", task.id)
+                    putExtra("LOG_ID", log.id)
+                    putExtra("IS_TASK_ARCHIVED", task.status == "5")
+                }
+                context.startActivity(intent)
             }
         }
 

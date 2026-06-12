@@ -37,7 +37,7 @@ class TaskDetailActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_task_detail_new)
 
-        progressBar = findViewById(R.id.progressBar)
+        //progressBar = findViewById(R.id.progressBar)
 
         // اطمینان از بارگذاری کش کاربران
         if (UserCache.getSize() == 0) {

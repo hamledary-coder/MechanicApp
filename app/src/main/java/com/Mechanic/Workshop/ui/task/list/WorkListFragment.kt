@@ -157,19 +157,7 @@ class WorkListFragment : Fragment() {
                         for (i in 0 until jsonArray.length()) {
                             val obj = jsonArray.getJSONObject(i)
 
-                            // Parse seen_by (برای کارها)
-                            val seenBy = mutableListOf<String>()
-                            val seenByStr = obj.optString("seen_by", "[]")
-                            if (seenByStr.isNotEmpty() && seenByStr != "[]") {
-                                try {
-                                    val seenByArray = JSONArray(seenByStr)
-                                    for (j in 0 until seenByArray.length()) {
-                                        seenBy.add(seenByArray.getString(j))
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e("WorkList", "Error parsing seen_by: ${e.message}")
-                                }
-                            }
+
 
                             val hasUnseenReport = obj.optInt("has_unseen_report", 0) == 1
 
@@ -193,7 +181,6 @@ class WorkListFragment : Fragment() {
                                 initial_review = obj.optString("initial_review", ""),
                                 system_request_number = obj.optString("system_request_number", ""),
                                 referredBy = obj.optString("referred_by", ""),
-                                seenBy = seenBy,
                                 hasUnseenReport = hasUnseenReport
                             )
 

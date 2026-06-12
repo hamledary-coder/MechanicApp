@@ -46,91 +46,85 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp"
+            android:padding="16dp"
             android:clipChildren="false">
 
-            <!-- کارت خوش‌آمدگویی -->
+            <!-- کارت خوش‌آمدگویی (کوچک‌تر) -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="40dp"
-                android:layout_marginLeft="5dp"
-                android:layout_marginRight="5dp"
-                android:clipChildren="false"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="4dp"
+                android:layout_marginBottom="20dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="3dp"
                 app:cardPreventCornerOverlap="false">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="24dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="👋 خوش آمدید،"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:textColor="@color/text_secondary" />
 
                     <TextView
                         android:id="@+id/tvWelcomeHome"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="2dp"
                         android:text="کاربر عزیز"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary" />
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- سطر اول کارت‌ها (کارتابل و بایگانی) -->
+            <!-- سطر اول کارت‌ها (کارتابل و بایگانی) - فاصله کمتر -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="32dp"
-                android:layout_marginLeft="5dp"
-                android:layout_marginRight="5dp"
-                android:clipChildren="false">
+                android:layout_marginBottom="16dp">
 
                 <!-- کارت کارتابل -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/cardCartable"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="24dp"
+                    android:layout_marginEnd="12dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?attr/selectableItemBackground"
                     android:clipChildren="false"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="4dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="3dp"
                     app:cardPreventCornerOverlap="false">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="32dp"
+                        android:padding="20dp"
                         android:gravity="center">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="📋"
-                            android:textSize="44sp" />
+                            android:textSize="32sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
+                            android:layout_marginTop="10dp"
                             android:text="کارتابل"
-                            android:textSize="18sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary" />
 
@@ -138,9 +132,9 @@
                             android:id="@+id/tvCartableCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
+                            android:layout_marginTop="8dp"
                             android:text="۰ کار"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textColor="@color/primary_blue" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
@@ -150,14 +144,14 @@
                     android:id="@+id/cardArchive"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="24dp"
+                    android:layout_marginStart="12dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?attr/selectableItemBackground"
                     android:clipChildren="false"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="4dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="3dp"
                     app:cardPreventCornerOverlap="false">
 
                     <LinearLayout
@@ -165,87 +159,84 @@
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="32dp">
+                        android:padding="20dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="📦"
-                            android:textSize="44sp" />
+                            android:textSize="32sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
+                            android:layout_marginTop="10dp"
                             android:text="بایگانی"
                             android:textColor="@color/text_primary"
-                            android:textSize="18sp"
+                            android:textSize="15sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
+                            android:layout_marginTop="8dp"
                             android:text="کارهای بسته شده"
                             android:textColor="@color/text_secondary"
-                            android:textSize="14sp" />
+                            android:textSize="12sp" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
-            <!-- سطر دوم کارت‌ها (تنظیمات و گفتگو) -->
+            <!-- سطر دوم کارت‌ها (تنظیمات و گفتگو) - فاصله کمتر -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginRight="5dp"
-                android:layout_marginLeft="5dp"
-                android:clipChildren="false">
+                android:orientation="horizontal">
 
                 <!-- کارت تنظیمات -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/cardSettings"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="24dp"
+                    android:layout_marginEnd="12dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?attr/selectableItemBackground"
                     android:clipChildren="false"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="4dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="3dp"
                     app:cardPreventCornerOverlap="false">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="32dp"
+                        android:padding="20dp"
                         android:gravity="center">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="⚙️"
-                            android:textSize="44sp" />
+                            android:textSize="32sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
+                            android:layout_marginTop="10dp"
                             android:text="تنظیمات"
-                            android:textSize="18sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
+                            android:layout_marginTop="8dp"
                             android:text="تنظیمات برنامه"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textColor="@color/text_secondary" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
@@ -255,44 +246,44 @@
                     android:id="@+id/cardChat"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="24dp"
+                    android:layout_marginStart="12dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?attr/selectableItemBackground"
                     android:clipChildren="false"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="4dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="3dp"
                     app:cardPreventCornerOverlap="false">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="32dp"
+                        android:padding="20dp"
                         android:gravity="center">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="💬"
-                            android:textSize="44sp" />
+                            android:textSize="32sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
+                            android:layout_marginTop="10dp"
                             android:text="گفتگو"
-                            android:textSize="18sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
+                            android:layout_marginTop="8dp"
                             android:text="ارسال پیام"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textColor="@color/primary_blue" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>

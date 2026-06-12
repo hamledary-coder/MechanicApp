@@ -77,6 +77,16 @@
                 android:text="شرح اقدام: ..."
                 android:layout_marginBottom="8dp"/>
 
+            <View
+                android:id="@+id/dividerDescription"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E0E0E0"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="12dp"
+                android:visibility="visible" />
+
+
             <TextView
                 android:id="@+id/tvDuration"
                 android:layout_width="match_parent"
@@ -93,12 +103,15 @@
                 android:text="گروه: ..."
                 android:layout_marginBottom="4dp"/>
 
-            <TextView
-                android:id="@+id/tvTime"
+            <View
+                android:id="@+id/dividerStatus"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="زمان: ..."
-                android:layout_marginBottom="4dp"/>
+                android:layout_height="1dp"
+                android:background="#E0E0E0"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="12dp"
+                android:visibility="visible" />
+
 
             <TextView
                 android:id="@+id/tvNewStatus"

@@ -101,6 +101,7 @@ class AddLogActivity : AppCompatActivity() {
         ensureUserCacheLoaded()
 
         updateGroupDisplay()
+        setupExpandableCards()
 
         if (isEditMode) {
             loadLogForEdit()
@@ -509,7 +510,7 @@ class AddLogActivity : AppCompatActivity() {
 
     private fun setupButtons() {
         btnSubmit.setOnClickListener {
-            if (validateForm()) {
+            if (validateForm()) { disableButton(btnSubmit)
                 if (isEditMode) updateLog() else submitLog()
             }
         }
@@ -603,6 +604,7 @@ class AddLogActivity : AppCompatActivity() {
             log = log,
             onSuccess = {
                 runOnUiThread {
+                    enableButton(btnSubmit)
                     Toast.makeText(this, "گزارش با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
                     setResult(RESULT_OK)
 
@@ -614,6 +616,7 @@ class AddLogActivity : AppCompatActivity() {
             },
             onError = { message ->
                 runOnUiThread {
+                    enableButton(btnSubmit)
                     Toast.makeText(this, "خطا در ثبت: $message", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -632,6 +635,7 @@ class AddLogActivity : AppCompatActivity() {
             log = log,
             onSuccess = {
                 runOnUiThread {
+                    enableButton(btnSubmit)
                     Toast.makeText(this, "گزارش با موفقیت ویرایش شد", Toast.LENGTH_SHORT).show()
                     setResult(RESULT_OK)
                     finish()
@@ -639,6 +643,7 @@ class AddLogActivity : AppCompatActivity() {
             },
             onError = { message ->
                 runOnUiThread {
+                    enableButton(btnSubmit)
                     Toast.makeText(this, "خطا در ویرایش: $message", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -685,4 +690,46 @@ class AddLogActivity : AppCompatActivity() {
         onBackPressed()
         return true
     }
+
+    private fun disableButton(button: Button) {
+        button.isEnabled = false
+        button.alpha = 0.5f  // نیمه شفاف برای نشان دادن غیرفعال بودن
+    }
+
+    private fun enableButton(button: Button) {
+        button.isEnabled = true
+        button.alpha = 1.0f
+    }
+
+    private fun setupExpandableCards() {
+        // تیم اجرایی
+        findViewById<LinearLayout>(R.id.headerTeam).setOnClickListener {
+            toggleCard(R.id.contentTeam, R.id.ivExpandTeam)
+        }
+
+        // شرایط کار
+        findViewById<LinearLayout>(R.id.headerWorkCondition).setOnClickListener {
+            toggleCard(R.id.contentWorkCondition, R.id.ivExpandWorkCondition)
+        }
+
+        // توضیحات تکمیلی
+        findViewById<LinearLayout>(R.id.headerNotes).setOnClickListener {
+            toggleCard(R.id.contentNotes, R.id.ivExpandNotes)
+        }
+    }
+
+    private fun toggleCard(contentId: Int, iconId: Int) {
+        val content = findViewById<LinearLayout>(contentId)
+        val icon = findViewById<ImageView>(iconId)
+
+        if (content.visibility == View.VISIBLE) {
+            content.visibility = View.GONE
+            icon.rotation = 0f
+        } else {
+            content.visibility = View.VISIBLE
+            icon.rotation = 180f
+        }
+    }
 }
+
+
