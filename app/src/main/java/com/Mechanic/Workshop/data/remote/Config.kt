@@ -9,6 +9,8 @@ object Config {
         const val TASKS = "$BASE_URL?action=getTasks"
         const val CREATE_TASK = BASE_URL
         const val DELETE_TASK = BASE_URL
+        const val SEND_MESSAGE = BASE_URL
+        const val GET_MESSAGES = BASE_URL
     }
 
     // ============== کدهای وضعیت (دو رقمی) ==============
@@ -67,6 +69,11 @@ object Config {
         fun getName(rowId: String): String {
             return userMap[rowId] ?: "کاربر $rowId"
         }
+    }
+
+    object ChatConfig {
+        const val ROOM_ID = "general"
+        const val POLLING_INTERVAL_MS = 2000L
     }
 
     // ============== کلیدهای SharedPreferences ==============

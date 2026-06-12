@@ -12,6 +12,7 @@ import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.archive.ArchiveActivity
 import com.Mechanic.Workshop.ui.cartable.CartableActivity
+import com.Mechanic.Workshop.ui.chat.ChatActivity
 import com.Mechanic.Workshop.ui.settings.SettingsActivity
 import com.Mechanic.Workshop.utils.UserCache
 import com.android.volley.Request
@@ -110,7 +111,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         cardChat.setOnClickListener {
-            Toast.makeText(this, "بخش گفتگو در حال توسعه است", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, ChatActivity::class.java))
         }
     }
 
