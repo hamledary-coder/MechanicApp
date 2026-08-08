@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.Mechanic.Workshop.ui.settings
 
 import android.app.ProgressDialog
@@ -78,7 +80,7 @@ class SettingsActivity : AppCompatActivity() {
         val personnelId = sharedPref.getString(Config.PrefKeys.PERSONNEL_ID, "") ?: ""
 
         tvUserName.text = userName
-        tvPersonnelId.text = "شماره پرسنلی: $personnelId"
+        tvPersonnelId.text = "$personnelId"
     }
 
     private fun displayAppVersion() {

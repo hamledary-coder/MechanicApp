@@ -18,5 +18,7 @@ data class TaskLogModel(
     val heatLevel: Int = 30,
     val pollutionLevel: Int = 0,
     val workType: String = "fixed_equipment",
-    val seenBy: List<String> = emptyList()
+    val seenBy: List<String> = emptyList(),
+    val physicalDifficulty: Int = 0,
+    val technicalComplexity: Int = 0
 )

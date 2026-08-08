@@ -18,11 +18,13 @@ import com.Mechanic.Workshop.ui.task.complete.CompleteTaskActivity
 import com.Mechanic.Workshop.utils.SeenItem
 import com.Mechanic.Workshop.utils.SeenManager
 import com.Mechanic.Workshop.data.remote.Config
+import com.Mechanic.Workshop.ui.cartable.CartableActivity
 import com.Mechanic.Workshop.utils.UserCache
 import com.Mechanic.Workshop.utils.VolleySingleton
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
 import org.json.JSONArray
+import org.json.JSONObject
 
 class TaskDetailActivity : AppCompatActivity() {
 
@@ -32,14 +34,19 @@ class TaskDetailActivity : AppCompatActivity() {
     private val logsList = mutableListOf<TaskLogModel>()
     private lateinit var taskLogRepository: TaskLogRepository
     private lateinit var progressBar: View
+    private lateinit var userRole: String
+
+    companion object {
+        private const val STATUS_IN_PROGRESS = "2"
+        private const val STATUS_BLOCKED = "3"
+        private const val STATUS_SENT_TO_SUPERVISOR = "41"
+        private const val STATUS_ARCHIVED = "5"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_task_detail_new)
 
-        //progressBar = findViewById(R.id.progressBar)
-
-        // اطمینان از بارگذاری کش کاربران
         if (UserCache.getSize() == 0) {
             showLoading(true)
             UserCache.loadAllUsers {
@@ -58,13 +65,14 @@ class TaskDetailActivity : AppCompatActivity() {
     }
 
     private fun showLoading(show: Boolean) {
-        progressBar.visibility = if (show) View.VISIBLE else View.GONE
+        if (::progressBar.isInitialized) {
+            progressBar.visibility = if (show) View.VISIBLE else View.GONE
+        }
     }
 
     override fun onResume() {
         super.onResume()
         if (::task.isInitialized) {
-            // به جای loadTaskLogs، کل task را از سرور می‌گیریم تا seenBy هم به‌روز شود
             fetchFullTaskFromServer()
         }
     }
@@ -88,10 +96,10 @@ class TaskDetailActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.recyclerViewTaskDetail)
         recyclerView.layoutManager = LinearLayoutManager(this)
         taskLogRepository = TaskLogRepository(this)
+        progressBar = findViewById(R.id.progressBar)
     }
 
     private fun loadTaskData() {
-        // ساخت task موقتی با داده‌های Intent
         val tempTask = TaskModel(
             id = intent.getStringExtra("TASK_ID") ?: "",
             createDate = intent.getStringExtra("DATE") ?: "",
@@ -114,9 +122,27 @@ class TaskDetailActivity : AppCompatActivity() {
             referredBy = intent.getStringExtra("REFERRED_BY") ?: ""
         )
         task = tempTask
-
-        // گرفتن اطلاعات کامل از سرور (شامل seenBy)
         fetchFullTaskFromServer()
+    }
+
+    private fun loadTaskLogs(callback: (() -> Unit)? = null) {
+        taskLogRepository.getTaskLogs(
+            taskId = task.id,
+            onSuccess = { logs ->
+                runOnUiThread {
+                    logsList.clear()
+                    logsList.addAll(logs)
+                    setupAdapter()
+                    callback?.invoke()
+                }
+            },
+            onError = { message ->
+                runOnUiThread {
+                    Toast.makeText(this, "خطا در دریافت گزارش‌ها: $message", Toast.LENGTH_SHORT).show()
+                    setupAdapter()
+                }
+            }
+        )
     }
 
     private fun getCurrentUserId(): String {
@@ -146,15 +172,10 @@ class TaskDetailActivity : AppCompatActivity() {
                     val currentUserId = getCurrentUserId()
                     val alreadySeen = task.seenBy.contains(currentUserId)
 
-                    // اگر کاربر قبلاً دیده بود یا الان داریم اعلام می‌کنیم
                     if (currentUserId.isNotEmpty() && !alreadySeen) {
-                        // فقط اعلام کن، دوباره fetch نکن
                         SeenManager.markAsSeen(this, currentUserId, listOf(SeenItem("TASK", task.id)))
-                        // برای نمایش، فعلاً همین seenBy خالی را نشان بده
-                        // (بعداً با onResume یا Pull-to-Refresh بروز می‌شود)
                     }
 
-                    // همیشه آداپتر و لاگ‌ها را نشان بده (مهم)
                     setupAdapter()
                     loadTaskLogs()
 
@@ -173,53 +194,24 @@ class TaskDetailActivity : AppCompatActivity() {
         VolleySingleton.getInstance(this).add(request)
     }
 
-    private fun loadTaskLogs() {
-        taskLogRepository.getTaskLogs(
-            taskId = task.id,
-            onSuccess = { logs ->
-                runOnUiThread {
-                    updateLogsAndStatus(logs)
-                }
-            },
-            onError = { message ->
-                runOnUiThread {
-                    Toast.makeText(this, "خطا در دریافت گزارش‌ها: $message", Toast.LENGTH_SHORT).show()
-                    setupAdapter()
-                }
-            }
-        )
-    }
-
-    private fun updateLogsAndStatus(logs: List<TaskLogModel>) {
-        logsList.clear()
-        logsList.addAll(logs)
-        setupAdapter()
-    }
-
     private fun setupAdapter() {
         if (!::task.isInitialized) return
 
         val currentUserId = getCurrentUserId()
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
-        val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
+        userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
 
-        val hasCompletionLog = logsList.any { it.newStatus == "4" || it.newStatus == "41" }
+        val hasCompletionLog = logsList.any { it.newStatus == STATUS_SENT_TO_SUPERVISOR }
 
         val isResponsible = task.responsible == currentUserId
-        val isArchived = task.status == "5"
+        val isArchived = task.status == STATUS_ARCHIVED
 
         var buttonMode = "HIDDEN"
         var onButtonClick: () -> Unit = {}
 
         if (!isArchived) {
             when (task.status) {
-                "4" -> {
-                    if (isResponsible) {
-                        buttonMode = "REQUEST_COMPLETE"
-                        onButtonClick = { completeTask() }
-                    }
-                }
-                "41" -> {
+                STATUS_SENT_TO_SUPERVISOR -> {
                     if (userRole == Config.RoleCode.SUPERVISOR) {
                         buttonMode = "FINAL_REVIEW"
                         onButtonClick = { completeTask() }
@@ -292,7 +284,9 @@ class TaskDetailActivity : AppCompatActivity() {
             onSuccess = {
                 runOnUiThread {
                     Toast.makeText(this, "گزارش حذف شد", Toast.LENGTH_SHORT).show()
-                    loadTaskLogs()
+                    loadTaskLogs {
+                        updateTaskStatusFromLastLog()
+                    }
                 }
             },
             onError = { message ->
@@ -303,11 +297,82 @@ class TaskDetailActivity : AppCompatActivity() {
         )
     }
 
+    private fun updateTaskStatusFromLastLog() {
+        if (logsList.isEmpty()) {
+            updateTaskStatusDirectly(STATUS_IN_PROGRESS)
+            return
+        }
+
+        val lastLog = logsList.maxByOrNull {
+            it.date + it.startTime
+        }
+
+        lastLog?.let {
+            val newStatus = when (it.newStatus) {
+                STATUS_IN_PROGRESS -> STATUS_IN_PROGRESS
+                STATUS_BLOCKED -> STATUS_BLOCKED
+
+                STATUS_SENT_TO_SUPERVISOR -> STATUS_SENT_TO_SUPERVISOR
+                else -> STATUS_IN_PROGRESS
+            }
+            updateTaskStatusDirectly(newStatus)
+        }
+    }
+
     private fun completeTask() {
-        startActivity(Intent(this, CompleteTaskActivity::class.java).apply {
-            putExtra("TASK_ID", task.id)
-            putExtra("TASK_TITLE", task.title)
-            putExtra("CURRENT_STATUS", task.status)
-        })
+        val currentUserId = getCurrentUserId()
+        val isResponsible = task.responsible == currentUserId
+
+        when {
+            isResponsible && task.status == STATUS_SENT_TO_SUPERVISOR -> {
+                updateTaskStatusDirectly(STATUS_SENT_TO_SUPERVISOR) { success ->
+                    if (success) {
+                        Toast.makeText(this, "درخواست تأیید به سرشیفت ارسال شد", Toast.LENGTH_SHORT).show()
+                        navigateToCartable()
+                    } else {
+                        Toast.makeText(this, "خطا در ارسال درخواست", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            userRole == Config.RoleCode.SUPERVISOR && task.status == STATUS_SENT_TO_SUPERVISOR -> {
+                startActivity(Intent(this, CompleteTaskActivity::class.java).apply {
+                    putExtra("TASK_ID", task.id)
+                    putExtra("TASK_TITLE", task.title)
+                    putExtra("CURRENT_STATUS", task.status)
+                })
+            }
+            else -> {
+                Toast.makeText(this, "شما مجوز انجام این عملیات را ندارید", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun updateTaskStatusDirectly(newStatus: String, callback: ((Boolean) -> Unit)? = null) {
+        val url = "${Config.BASE_URL}?action=updateTaskStatus"
+        val jsonObject = JSONObject().apply {
+            put("taskId", task.id)
+            put("status", newStatus)
+        }
+        val request = JsonObjectRequest(
+            Request.Method.POST, url, jsonObject,
+            { _ ->
+                Log.d("TaskDetail", "Task status updated to $newStatus")
+                task = task.copy(status = newStatus)
+                setupAdapter()
+                callback?.invoke(true)
+            },
+            { error ->
+                Log.e("TaskDetail", "Error updating task status: ${error.message}")
+                callback?.invoke(false)
+            }
+        )
+        VolleySingleton.getInstance(this).add(request)
+    }
+
+    private fun navigateToCartable() {
+        val intent = Intent(this, CartableActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(intent)
+        finish()
     }
 }

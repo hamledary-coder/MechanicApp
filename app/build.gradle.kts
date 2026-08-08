@@ -12,8 +12,8 @@ android {
         applicationId = "com.Mechanic.Workshop"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -55,9 +55,6 @@ dependencies {
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("com.github.aliab:Persian-Date-Picker-Dialog:1.8.0")
-    //implementation("com.github.SeyyedAliTabatabaei.ZamanakCalendar:core:1.1.7")
-
-    //implementation("com.github.hamsaadev:Persian-Date-Picker-Dialog:1.8.0")
 
 
     implementation(libs.androidx.lifecycle.runtime.ktx)

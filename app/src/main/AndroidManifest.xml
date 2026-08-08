@@ -62,7 +62,7 @@
             android:screenOrientation="portrait" />
 
         <activity android:name=".ui.task.log.TaskLogDetailActivity"
-            android:exported = "false"
+            android:exported="false"
             android:screenOrientation="portrait"/>
 
         <activity
@@ -70,8 +70,36 @@
             android:exported="false"
             android:screenOrientation="portrait" />
 
-        <activity android:name=".ui.chat.ChatActivity" />
+        <activity
+            android:name=".ui.chat.ChatActivity"
+            android:theme="@style/Theme.ChatActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
+        <activity
+            android:name=".ui.reports.ReportsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.task.evaluation.EvaluationActivity"
+            android:parentActivityName=".ui.task.detail.TaskDetailActivity" />
+
+        <activity
+            android:name=".ui.task.quicklog.QuickLogActivity"
+            android:parentActivityName=".ui.home.HomeActivity"
+            android:screenOrientation="portrait" />
+
+        <!-- ✅ FileProvider رو داخل application قرار بده -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

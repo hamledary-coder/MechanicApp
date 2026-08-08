@@ -23,7 +23,6 @@ import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.task.create.CreateTaskActivity
 import com.Mechanic.Workshop.ui.task.repository.TaskRepository
-import com.Mechanic.Workshop.ui.task.dialog.InviteDialog
 import com.Mechanic.Workshop.ui.referral.ReferDialog
 import com.Mechanic.Workshop.ui.task.detail.TaskDetailActivity
 import com.Mechanic.Workshop.utils.ActivityLogger
@@ -33,6 +32,7 @@ import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import org.json.JSONArray
 
+@Suppress("DEPRECATION")
 class WorkListFragment : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
@@ -198,14 +198,15 @@ class WorkListFragment : Fragment() {
                                 "کارتابل من" -> {
                                     when (userRole) {
                                         Config.RoleCode.EMPLOYEE -> {
-                                            if (task.assignedTo.split(",").contains(currentUserRowId) && task.status != "5") {
+                                            if (task.assignedTo.split(",").contains(currentUserRowId)
+                                                && task.status != "5"  && task.responsible == currentUserRowId) {
                                                 taskList.add(task)
                                             }
                                         }
                                         Config.RoleCode.SUPERVISOR -> {
                                             val isInvolved = task.assignedTo.split(",").contains(currentUserRowId) ||
                                                     task.responsible == currentUserRowId
-                                            val isCompleted = task.status == "4"
+                                            val isCompleted = task.status == "41"
                                             val hasNewReport = task.hasUnseenReport
                                             if ((isInvolved || isCompleted || hasNewReport) && task.status != "5") {
                                                 taskList.add(task)
@@ -263,8 +264,7 @@ class WorkListFragment : Fragment() {
                     tabType = "unassigned",
                     onEditClick = { task -> openEditTask(task) },
                     onDeleteClick = { task -> deleteTask(task) },
-                    onReferClick = { task -> referTask(task) },
-                    onVolunteerClick = { task -> volunteerTask(task) }
+                    onReferClick = { task -> referTask(task) }
                 )
             }
             "در حال انجام" -> {
@@ -274,7 +274,6 @@ class WorkListFragment : Fragment() {
                     onEditClick = { task -> openEditTask(task) },
                     onDeleteClick = { task -> deleteTask(task) },
                     onReferClick = { task -> referTask(task) },
-                    onVolunteerClick = { task -> volunteerTask(task) },
                     onItemClick = { task -> openTaskDetail(task) }
                 )
             }
@@ -285,7 +284,6 @@ class WorkListFragment : Fragment() {
                     onEditClick = { task -> openEditTask(task) },
                     onDeleteClick = { task -> deleteTask(task) },
                     onReferClick = { task -> referTask(task) },
-                    onVolunteerClick = { task -> volunteerTask(task) },
                     onItemClick = { task -> openTaskDetail(task) }
                 )
             }
@@ -295,8 +293,7 @@ class WorkListFragment : Fragment() {
                     tabType = "unassigned",
                     onEditClick = { task -> openEditTask(task) },
                     onDeleteClick = { task -> deleteTask(task) },
-                    onReferClick = { task -> referTask(task) },
-                    onVolunteerClick = { task -> volunteerTask(task) }
+                    onReferClick = { task -> referTask(task) }
                 )
             }
         }
@@ -455,67 +452,7 @@ class WorkListFragment : Fragment() {
         Log.d("REFER_DEBUG", "ReferDialog shown")
     }
 
-    // داوطلب شدن
-    private fun volunteerTask(task: TaskModel) {
-        val sharedPref = requireContext().getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
-        val currentUserRowId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
 
-        if (task.responsible.isNotEmpty() && task.responsible != currentUserRowId) {
-            taskRepository.volunteer(
-                taskId = task.id,
-                assigneeIds = currentUserRowId,
-                responsibleId = null,
-                onSuccess = {
-                    requireActivity().runOnUiThread {
-                        Toast.makeText(context, "شما به گروه انجام‌دهندگان اضافه شدید", Toast.LENGTH_SHORT).show()
-                        fetchTasks()
-                    }
-                },
-                onError = { message ->
-                    requireActivity().runOnUiThread {
-                        Toast.makeText(context, "خطا: $message", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            )
-        } else if (task.responsible.isEmpty()) {
-            val inviteDialog = InviteDialog(requireContext(), taskRepository) { inviteeIds ->
-                if (inviteeIds.isNotEmpty()) {
-                    taskRepository.volunteer(
-                        taskId = task.id,
-                        assigneeIds = currentUserRowId,
-                        responsibleId = currentUserRowId,
-                        onSuccess = {
-                            taskRepository.sendInvite(
-                                taskId = task.id,
-                                inviteeIds = inviteeIds,
-                                onSuccess = {
-                                    requireActivity().runOnUiThread {
-                                        Toast.makeText(context, "مسئولیت ثبت شد و دعوتنامه ارسال گردید", Toast.LENGTH_SHORT).show()
-                                        fetchTasks()
-                                    }
-                                },
-                                onError = { message ->
-                                    requireActivity().runOnUiThread {
-                                        Toast.makeText(context, "دعوتنامه ارسال نشد: $message", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            )
-                        },
-                        onError = { message ->
-                            requireActivity().runOnUiThread {
-                                Toast.makeText(context, "خطا در ثبت مسئولیت: $message", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    )
-                }
-            }
-            inviteDialog.show()
-        } else {
-            requireActivity().runOnUiThread {
-                Toast.makeText(context, "شما قبلاً مسئول این کار هستید", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
 
     private fun showEmptyState() {
         val emptyTextView = view?.findViewById<TextView>(R.id.emptyStateText)

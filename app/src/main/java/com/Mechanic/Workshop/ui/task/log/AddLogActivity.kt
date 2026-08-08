@@ -28,7 +28,8 @@ import android.widget.TextView
 import android.widget.Toast
 import com.Mechanic.Workshop.data.model.Employee
 import com.Mechanic.Workshop.ui.task.detail.TaskDetailActivity
-import com.Mechanic.Workshop.ui.task.dialog.WorkConditionDialog
+import com.Mechanic.Workshop.ui.task.evaluation.EvaluationActivity
+import com.Mechanic.Workshop.utils.DateUtils
 import com.Mechanic.Workshop.utils.VolleySingleton
 import com.Mechanic.Workshop.utils.UserCache
 import com.android.volley.Request
@@ -56,11 +57,6 @@ class AddLogActivity : AppCompatActivity() {
     private var task: TaskModel? = null
     private var currentGroupIds: String = ""
     private lateinit var taskLogRepository: TaskLogRepository
-    private lateinit var btnWorkCondition: Button
-    private var currentHeat = 30
-    private var currentPollution = 0
-    private var currentWorkType = "fixed_equipment"
-
     private var isEditMode = false
     private var editingLogId: String? = null
 
@@ -70,20 +66,22 @@ class AddLogActivity : AppCompatActivity() {
     companion object {
         private const val STATUS_CONTINUE = "2"
         private const val STATUS_STOPPED = "3"
-        private const val STATUS_COMPLETED = "4"
-
-        private const val WORK_TYPE_FIXED = "1"
-        private const val WORK_TYPE_ROTATING = "2"
-        private const val WORK_TYPE_INSPECTION = "3"
+        private const val STATUS_SENT_TO_SUPERVISOR = "41"  // ← جدید
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_log)
 
-
+        // تنظیم Toolbar
+        val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-
+        supportActionBar?.title = if (intent.getBooleanExtra("IS_EDIT_MODE", false)) {
+            "ویرایش گزارش"
+        } else {
+            "ثبت گزارش جدید"
+        }
 
         taskLogRepository = TaskLogRepository(this)
 
@@ -95,11 +93,8 @@ class AddLogActivity : AppCompatActivity() {
         setupGroupSelection()
         setupStatusSpinner()
         setupButtons()
-        setupWorkConditionDialog()
 
-        // اطمینان از بارگذاری UserCache
         ensureUserCacheLoaded()
-
         updateGroupDisplay()
         setupExpandableCards()
 
@@ -163,85 +158,15 @@ class AddLogActivity : AppCompatActivity() {
         btnSubmit = findViewById(R.id.btnSubmit)
         btnCancel = findViewById(R.id.btnCancel)
         tvDuration = findViewById(R.id.tvDuration)
-        btnWorkCondition = findViewById(R.id.btnWorkCondition)
         tvConditionalLabel = findViewById(R.id.tvConditionalLabel)
         etConditionalText = findViewById(R.id.etConditionalText)
 
-        btnWorkCondition.visibility = View.VISIBLE
-        updateWorkConditionButton()
-
         if (!isEditMode) {
-            etStartTime.setText("08:00")
-            etEndTime.setText("12:00")
+            etStartTime.setText("09:00")
+            etEndTime.setText("11:00")
             calculateDuration()
-            val today = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date())
-            etDate.setText(today)
+            etDate.setText(DateUtils.gregorianToShamsi())
         }
-    }
-
-    private fun setupWorkConditionDialog() {
-        btnWorkCondition.setOnClickListener {
-            val dialog = WorkConditionDialog(
-                context = this,
-                taskId = task?.id ?: "",
-                onConfirm = { heat, pollution, workType ->
-                    updateWorkConditionData(heat, pollution, workType, false)
-                },
-                onApplyToAll = { heat, pollution, workType ->
-                    updateWorkConditionData(heat, pollution, workType, true)
-                }
-            )
-            dialog.show()
-        }
-    }
-
-    private fun updateWorkConditionData(heat: Int, pollution: Int, workType: String, applyToAll: Boolean) {
-        currentHeat = heat
-        currentPollution = pollution
-        currentWorkType = workType
-        updateWorkConditionButton()
-
-        val workTypeText = getWorkTypeText(currentWorkType)
-        val message = "شرایط کار ذخیره شد: $heat°C / $pollution ppm - نوع کار: $workTypeText"
-
-        if (applyToAll) {
-            applyWorkConditionToAll(heat, pollution, workType)
-        } else {
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun getWorkTypeText(workType: String): String = when (workType) {
-        WORK_TYPE_FIXED -> "تجهیزات ثابت"
-        WORK_TYPE_ROTATING -> "عیب‌یابی تجهیزات دوار"
-        WORK_TYPE_INSPECTION -> "بررسی"
-        else -> "نامشخص"
-    }
-
-    private fun applyWorkConditionToAll(heat: Int, pollution: Int, workType: String) {
-        val json = JSONObject().apply {
-            put("action", "applyWorkConditionToAll")
-            put("taskId", task?.id ?: "")
-            put("heatLevel", heat)
-            put("pollutionLevel", pollution)
-            put("workType", workType)
-        }
-
-        val request = JsonObjectRequest(
-            Request.Method.POST, Config.BASE_URL, json,
-            {
-                Toast.makeText(this, "شرایط کار به همه گزارش‌ها اعمال شد", Toast.LENGTH_SHORT).show()
-                finish()
-                startActivity(intent)
-            },
-            { Toast.makeText(this, "خطا در اعمال به همه", Toast.LENGTH_SHORT).show() }
-        )
-        VolleySingleton.getInstance(this).add(request)
-    }
-
-    private fun updateWorkConditionButton() {
-        val workTypeText = getWorkTypeText(currentWorkType)
-        btnWorkCondition.text = "شرایط کار: $currentHeat°C / ${currentPollution}ppm - $workTypeText"
     }
 
     private fun loadLogForEdit() {
@@ -249,10 +174,10 @@ class AddLogActivity : AppCompatActivity() {
         val logId = editingLogId ?: ""
 
         taskLogRepository.getTaskLogs(taskId,
-            onSuccess = { logs ->
-                val log = logs.find { it.id == logId }
+            onSuccess = { allLogs ->  // ← نام را عوض کن
+                val log = allLogs.find { it.id == logId }
                 if (log != null) {
-                    populateLogData(log)
+                    populateLogData(log, allLogs)  // ← همه لاگ‌ها را پاس بده
                 } else {
                     showErrorAndFinish("گزارش یافت نشد")
                 }
@@ -263,7 +188,7 @@ class AddLogActivity : AppCompatActivity() {
         )
     }
 
-    private fun populateLogData(log: TaskLogModel) {
+    private fun populateLogData(log: TaskLogModel, allLogs: List<TaskLogModel> = emptyList()) {
         etActionDescription.setText(log.actionDescription)
         etDate.setText(log.date)
         etStartTime.setText(log.startTime)
@@ -273,19 +198,33 @@ class AddLogActivity : AppCompatActivity() {
         currentGroupIds = log.assignedUsers
         updateGroupDisplay()
 
-        currentHeat = log.heatLevel
-        currentPollution = log.pollutionLevel
-        currentWorkType = log.workType
-        updateWorkConditionButton()
-
         etConditionalText.setText(log.notes)
 
-        val statusCodes = listOf(STATUS_CONTINUE, STATUS_STOPPED, STATUS_COMPLETED)
+        // ========== تشخیص آخرین گزارش ==========
+        val isLastLog = if (allLogs.isNotEmpty()) {
+            val sortedLogs = allLogs.sortedWith(compareByDescending<TaskLogModel> {
+                it.date + it.startTime
+            })
+            sortedLogs.firstOrNull()?.id == log.id
+        } else {
+            true
+        }
+
+        // ========== تنظیم اسپینر ==========
+        val statusCodes = listOf(STATUS_CONTINUE, STATUS_STOPPED, STATUS_SENT_TO_SUPERVISOR)
         val statusIndex = statusCodes.indexOf(log.newStatus)
         if (statusIndex >= 0) {
             spinnerNewStatus.setSelection(statusIndex)
             updateConditionalFields(statusIndex)
+        } else {
+            spinnerNewStatus.setSelection(2)
+            updateConditionalFields(2)
         }
+
+        // ========== فقط این خط ساده ==========
+        // اگر آخرین گزارش نبود، اسپینر را غیرفعال کن
+        spinnerNewStatus.isEnabled = isLastLog
+        spinnerNewStatus.alpha = if (isLastLog) 1.0f else 0.5f
     }
 
     private fun showErrorAndFinish(message: String) {
@@ -301,7 +240,7 @@ class AddLogActivity : AppCompatActivity() {
 
     private fun showDatePicker() {
         val currentDate = etDate.text.toString().split("/")
-        val initYear = currentDate.getOrNull(0)?.toIntOrNull() ?: 1400
+        val initYear = currentDate.getOrNull(0)?.toIntOrNull() ?: 1405
         val initMonth = currentDate.getOrNull(1)?.toIntOrNull() ?: 1
         val initDay = currentDate.getOrNull(2)?.toIntOrNull() ?: 1
 
@@ -316,8 +255,8 @@ class AddLogActivity : AppCompatActivity() {
             .setListener(object : PersianPickerListener {
                 override fun onDateSelected(persianPickerDate: PersianPickerDate) {
                     val year = persianPickerDate.persianYear
-                    val month = String.format("%02d", persianPickerDate.persianMonth)
-                    val day = String.format("%02d", persianPickerDate.persianDay)
+                    val month = String.format(Locale.ENGLISH, "%02d", persianPickerDate.persianMonth)
+                    val day = String.format(Locale.ENGLISH, "%02d", persianPickerDate.persianDay)
                     etDate.setText("$year/$month/$day")
                 }
                 override fun onDismissed() { }
@@ -362,7 +301,7 @@ class AddLogActivity : AppCompatActivity() {
         timePickerDialog.show()
     }
 
-    private fun calculateDuration() {
+    private fun calculateDuration(): Int {
         val start = etStartTime.text.toString()
         val end = etEndTime.text.toString()
 
@@ -385,13 +324,15 @@ class AddLogActivity : AppCompatActivity() {
 
                     tvDuration.text = "مدت زمان: $hours ساعت و $minutes دقیقه"
                     tvDuration.visibility = View.VISIBLE
-                    return
+
+                    return durationMinutes  // ← برگرداندن عدد
                 }
             } catch (e: Exception) {
                 Log.e("AddLog", "Error calculating duration", e)
             }
         }
         tvDuration.visibility = View.GONE
+        return 0
     }
 
     private fun setupGroupSelection() {
@@ -402,7 +343,6 @@ class AddLogActivity : AppCompatActivity() {
             // ساخت لیست کارمندانی که در گروه اصلی هستند با استفاده از UserCache
             val groupMembers = originalGroupIdList.mapNotNull { id ->
                 val name = UserCache.getName(id)
-                // اگر نام با "کاربر" شروع می‌شود، یعنی در کش نیست اما ID معتبر است
                 if (name != "نامشخص" && !name.startsWith("کاربر")) {
                     Employee(id, name, "")
                 } else {
@@ -415,8 +355,7 @@ class AddLogActivity : AppCompatActivity() {
                 Toast.makeText(this, "در حال بارگذاری اسامی کاربران...", Toast.LENGTH_SHORT).show()
                 UserCache.loadAllUsers {
                     runOnUiThread {
-                        // بعد از بارگذاری، دوباره دیالوگ را باز کن
-                        setupGroupSelection() // بازگشت به این تابع
+                        setupGroupSelection()
                         btnEditGroup.performClick()
                     }
                 }
@@ -443,10 +382,8 @@ class AddLogActivity : AppCompatActivity() {
                 return
             }
 
-            // استفاده از UserCache برای دریافت نام‌ها
             val names = ids.mapNotNull { id ->
                 val name = UserCache.getName(id)
-                // اگر نام با "کاربر" شروع می‌شود و کش پر است، یعنی کاربر در کش نیست
                 if (name != "نامشخص" && !name.startsWith("کاربر $id")) {
                     name
                 } else {
@@ -457,7 +394,6 @@ class AddLogActivity : AppCompatActivity() {
             if (names.isNotEmpty()) {
                 tvGroupValue.text = names.joinToString("، ")
             } else {
-                // اگر نامی پیدا نشد، IDها را نشان بده
                 tvGroupValue.text = ids.joinToString("، ")
             }
         } else {
@@ -491,7 +427,7 @@ class AddLogActivity : AppCompatActivity() {
         val statusList = listOf(
             STATUS_CONTINUE to "ادامه دارد",
             STATUS_STOPPED to "متوقف",
-            STATUS_COMPLETED to "اتمام کار"
+            STATUS_SENT_TO_SUPERVISOR to "اتمام کار"  // ← تغییر از STATUS_COMPLETED به STATUS_SENT_TO_SUPERVISOR
         )
 
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, statusList.map { it.second })
@@ -510,7 +446,8 @@ class AddLogActivity : AppCompatActivity() {
 
     private fun setupButtons() {
         btnSubmit.setOnClickListener {
-            if (validateForm()) { disableButton(btnSubmit)
+            if (validateForm()) {
+                disableButton(btnSubmit)
                 if (isEditMode) updateLog() else submitLog()
             }
         }
@@ -546,15 +483,14 @@ class AddLogActivity : AppCompatActivity() {
         return when (spinnerNewStatus.selectedItemPosition) {
             0 -> STATUS_CONTINUE
             1 -> STATUS_STOPPED
-            2 -> STATUS_COMPLETED
+            2 -> STATUS_SENT_TO_SUPERVISOR  // ← تغییر
             else -> STATUS_CONTINUE
         }
     }
 
     private fun getNewTaskStatus(logStatus: String): String {
-        return if (logStatus == STATUS_COMPLETED) STATUS_COMPLETED else STATUS_CONTINUE
+        return if (logStatus == STATUS_SENT_TO_SUPERVISOR) STATUS_SENT_TO_SUPERVISOR else STATUS_CONTINUE
     }
-
     private fun getCurrentUserInfo(): Pair<String, String> {
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
         val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
@@ -586,9 +522,11 @@ class AddLogActivity : AppCompatActivity() {
             newStatus = status,
             attachments = "",
             notes = getFinalNotes(),
-            heatLevel = currentHeat,
-            pollutionLevel = currentPollution,
-            workType = currentWorkType
+            heatLevel = 30,
+            pollutionLevel = 0,
+            workType = "1",
+            physicalDifficulty = 0,
+            technicalComplexity = 0
         )
     }
 
@@ -602,15 +540,27 @@ class AddLogActivity : AppCompatActivity() {
 
         taskLogRepository.addTaskLog(
             log = log,
+            // در متد submitLog، بعد از onSuccess:
             onSuccess = {
                 runOnUiThread {
                     enableButton(btnSubmit)
                     Toast.makeText(this, "گزارش با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
                     setResult(RESULT_OK)
 
-                    if (selectedStatus == STATUS_COMPLETED) {
-                        navigateToTaskDetail()
+                    // 🔥 باز کردن صفحه ارزیابی
+                    val intent = Intent(this, EvaluationActivity::class.java).apply {
+                        putExtra("TASK_ID", task?.id ?: "")
+                        putExtra("LOG_ID", log.id)
+                        putExtra("TASK_TITLE", task?.title ?: "")
+                        putExtra("TASK_DATE", etDate.text.toString())
+                        putExtra("TASK_START_TIME", etStartTime.text.toString())
+                        putExtra("TASK_END_TIME", etEndTime.text.toString())
+                        putExtra("TASK_DESCRIPTION", etActionDescription.text.toString())
+                        putExtra("ASSIGNED_USERS", currentGroupIds)
+                        putExtra("DURATION_MINUTES", calculateDuration())
+                        // IS_FROM_DETAIL ارسال نمی‌شود (یا false)
                     }
+                    startActivity(intent)
                     finish()
                 }
             },
@@ -664,27 +614,6 @@ class AddLogActivity : AppCompatActivity() {
         VolleySingleton.getInstance(this).add(request)
     }
 
-    private fun navigateToTaskDetail() {
-        val intent = Intent(this, TaskDetailActivity::class.java).apply {
-            putExtra("TASK_ID", task?.id ?: "")
-            putExtra("TITLE", task?.title ?: "")
-            putExtra("DESC", task?.description ?: "")
-            putExtra("CREATOR", task?.creator ?: "")
-            putExtra("DATE", task?.createDate ?: "")
-            putExtra("RESPONSIBLE", task?.responsible ?: "")
-            putExtra("ASSIGNED_TO", task?.assignedTo ?: "")
-            putExtra("UNIT", task?.unit ?: "")
-            putExtra("PRIORITY", task?.priority ?: "")
-            putExtra("SUB_UNIT", task?.sub_unit ?: "")
-            putExtra("DECLARATION_METHOD", task?.declaration_method ?: "")
-            putExtra("REQUESTER", task?.requester ?: "")
-            putExtra("REQUEST_DATE", task?.request_date ?: "")
-            putExtra("INITIAL_REVIEW", task?.initial_review ?: "")
-            putExtra("SYSTEM_REQUEST_NUMBER", task?.system_request_number ?: "")
-            putExtra("URGENCY", task?.urgency ?: "")
-        }
-        startActivity(intent)
-    }
 
     override fun onSupportNavigateUp(): Boolean {
         onBackPressed()
@@ -693,7 +622,7 @@ class AddLogActivity : AppCompatActivity() {
 
     private fun disableButton(button: Button) {
         button.isEnabled = false
-        button.alpha = 0.5f  // نیمه شفاف برای نشان دادن غیرفعال بودن
+        button.alpha = 0.5f
     }
 
     private fun enableButton(button: Button) {
@@ -705,11 +634,6 @@ class AddLogActivity : AppCompatActivity() {
         // تیم اجرایی
         findViewById<LinearLayout>(R.id.headerTeam).setOnClickListener {
             toggleCard(R.id.contentTeam, R.id.ivExpandTeam)
-        }
-
-        // شرایط کار
-        findViewById<LinearLayout>(R.id.headerWorkCondition).setOnClickListener {
-            toggleCard(R.id.contentWorkCondition, R.id.ivExpandWorkCondition)
         }
 
         // توضیحات تکمیلی
@@ -731,5 +655,3 @@ class AddLogActivity : AppCompatActivity() {
         }
     }
 }
-
-

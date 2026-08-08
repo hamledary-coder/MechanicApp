@@ -18,7 +18,6 @@ object Config {
         const val NOT_ACTIONED = "1"
         const val IN_PROGRESS = "2"
         const val BLOCKED = "3"
-        const val REQUEST_COMPLETE = "4"      // اضافه کن
         const val SENT_TO_SUPERVISOR = "41"   // اضافه کن
         const val ARCHIVED = "5"              // اضافه کن
 
@@ -27,7 +26,6 @@ object Config {
                 NOT_ACTIONED -> "اقدام نشده"
                 IN_PROGRESS -> "در حال انجام"
                 BLOCKED -> "متوقف"
-                REQUEST_COMPLETE -> "درخواست اتمام"
                 SENT_TO_SUPERVISOR -> "ارسال به سرشیفت"
                 ARCHIVED -> "بایگانی"
                 else -> "نامشخص"
@@ -112,6 +110,45 @@ object Config {
             HIGH -> "بالا"
             LOW -> "کم"
             else -> "نامشخص"
+        }
+    }
+
+    // ============== ارزیابی عملکرد ==============
+    object Evaluation {
+        // سختی فیزیکی (برای کارهای تجهیزات ثابت)
+        const val PHYSICAL_VERY_LIGHT = 1
+        const val PHYSICAL_LIGHT = 2
+        const val PHYSICAL_MEDIUM = 3
+        const val PHYSICAL_HEAVY = 4
+        const val PHYSICAL_VERY_HEAVY = 5
+
+        // پیچیدگی فنی (برای کارهای عیب‌یابی تجهیزات دوار)
+        const val TECH_VERY_LOW = 1
+        const val TECH_LOW = 2
+        const val TECH_MEDIUM = 3
+        const val TECH_HIGH = 4
+        const val TECH_VERY_HIGH = 5
+
+        fun getPhysicalText(value: Int): String {
+            return when (value) {
+                PHYSICAL_VERY_LIGHT -> "خیلی سبک"
+                PHYSICAL_LIGHT -> "سبک"
+                PHYSICAL_MEDIUM -> "متوسط"
+                PHYSICAL_HEAVY -> "سنگین"
+                PHYSICAL_VERY_HEAVY -> "خیلی سنگین"
+                else -> "ثبت نشده"
+            }
+        }
+
+        fun getTechnicalText(value: Int): String {
+            return when (value) {
+                TECH_VERY_LOW -> "خیلی کم"
+                TECH_LOW -> "کم"
+                TECH_MEDIUM -> "متوسط"
+                TECH_HIGH -> "زیاد"
+                TECH_VERY_HIGH -> "خیلی زیاد"
+                else -> "ثبت نشده"
+            }
         }
     }
 }

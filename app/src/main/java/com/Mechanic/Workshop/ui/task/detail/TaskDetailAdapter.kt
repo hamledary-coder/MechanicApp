@@ -27,6 +27,7 @@ import android.util.Log
 import android.view.Gravity
 import android.graphics.Color
 import androidx.cardview.widget.CardView
+import com.Mechanic.Workshop.ui.task.evaluation.EvaluationActivity
 import com.Mechanic.Workshop.ui.task.log.TaskLogDetailActivity
 import com.Mechanic.Workshop.utils.SeenItem
 import com.Mechanic.Workshop.utils.SeenManager
@@ -372,29 +373,52 @@ class TaskDetailAdapter(
         private fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
     }
 
+
     // ViewHolder برای هر گزارش
     class TaskLogViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val tvLogSummary: TextView = itemView.findViewById(R.id.tvLogSummary)
-        private val ivExpand: ImageView = itemView.findViewById(R.id.ivExpand)
-        private val ivMenu: ImageView = itemView.findViewById(R.id.ivMenu)
         private val divider: View = itemView.findViewById(R.id.divider)
         private val detailLayout: View = itemView.findViewById(R.id.detailLayout)
         private val tvActionDescription: TextView = itemView.findViewById(R.id.tvActionDescription)
         private val tvDuration: TextView = itemView.findViewById(R.id.tvDuration)
         private val tvWorkers: TextView = itemView.findViewById(R.id.tvWorkers)
-        //private val tvTime: TextView = itemView.findViewById(R.id.tvTime)
         private val tvNewStatus: TextView = itemView.findViewById(R.id.tvNewStatus)
-        private val tvLogNotes: TextView = itemView.findViewById(R.id.tvLogNotes)
-        private val tvCommentLabel: TextView = itemView.findViewById(R.id.tvCommentLabel)
-        private val commentsContainer: LinearLayout = itemView.findViewById(R.id.commentsContainer)
         private val btnAddComment: Button = itemView.findViewById(R.id.btnAddComment)
         private val cardLog: CardView = itemView.findViewById(R.id.cardLog)
-        private var isExpanded = false
+
+        // بخش ارزیابی
+        private val evaluationContainer: LinearLayout = itemView.findViewById(R.id.evaluationContainer)
+        private val evaluationHeader: LinearLayout = itemView.findViewById(R.id.evaluationHeader)
+        private val evaluationDetail: LinearLayout = itemView.findViewById(R.id.evaluationDetail)
+        private val ivEvaluationExpand: ImageView = itemView.findViewById(R.id.ivEvaluationExpand)
+        private val dividerEvaluation: View = itemView.findViewById(R.id.dividerEvaluation)
+        private val tvHeatLevel: TextView = itemView.findViewById(R.id.tvHeatLevel)
+        private val tvPollutionLevel: TextView = itemView.findViewById(R.id.tvPollutionLevel)
+        private val tvPhysicalDifficulty: TextView = itemView.findViewById(R.id.tvPhysicalDifficulty)
+        private val tvTechnicalComplexity: TextView = itemView.findViewById(R.id.tvTechnicalComplexity)
+
+        // دکمه‌های عملیاتی
+        private val actionButtonsContainer: LinearLayout = itemView.findViewById(R.id.actionButtonsContainer)
+        private val btnEvaluate: Button = itemView.findViewById(R.id.btnEvaluate)
+        private val btnEdit: Button = itemView.findViewById(R.id.btnEdit)
+        private val btnDelete: Button = itemView.findViewById(R.id.btnDelete)
+
+        // دیوایدرها
+        private val dividerDescription: View = itemView.findViewById(R.id.dividerDescription)
+        private val dividerWorkers: View = itemView.findViewById(R.id.dividerWorkers)
+        private val dividerSeenBy: View = itemView.findViewById(R.id.dividerSeenBy)
+        private val dividerButtons: View = itemView.findViewById(R.id.dividerButtons)
+
+        private var isEvaluationExpanded = false
         private lateinit var currentLog: TaskLogModel
         private lateinit var currentTask: TaskModel
         private lateinit var onRefreshCallback: () -> Unit
         private lateinit var currentUserId: String
         private lateinit var onDeleteCallback: (TaskLogModel) -> Unit
+
+        private val statusContainer: LinearLayout = itemView.findViewById(R.id.statusContainer)
+        private val statusDot: View = itemView.findViewById(R.id.statusDot)
+
 
         @SuppressLint("SetTextI18n")
         fun bind(
@@ -411,106 +435,113 @@ class TaskDetailAdapter(
             this.onDeleteCallback = onDelete
             this.onRefreshCallback = onRefresh
 
-            // رنگ کردن هدر گزارش برای گزارش‌های جدید
+            // رنگ کارت برای گزارش‌های جدید
             val isSeenByCurrentUser = currentLog.seenBy.contains(currentUserId)
             if (!isSeenByCurrentUser && (userRole == Config.RoleCode.SUPERVISOR || userRole == Config.RoleCode.MANAGER)) {
-                cardLog.setCardBackgroundColor(Color.parseColor("#E3F2FD"))
-                isExpanded = true
+                cardLog.setCardBackgroundColor(Color.parseColor("#F0F5FF"))
             } else {
-                cardLog.setCardBackgroundColor(Color.WHITE)
-                isExpanded = false
+                //cardLog.setCardBackgroundColor(Color.WHITE)
             }
 
-            if (log.actionDescription.contains("برگشت داده شد")) {
-                tvActionDescription.setTextColor(Color.RED)
-            } else {
-                tvActionDescription.setTextColor(Color.BLACK)
-            }
-
-            // ساخت متن هدر با ساعت
+            // هدر
             val timeRange = if (log.startTime.isNotEmpty() || log.endTime.isNotEmpty()) {
                 " (${log.startTime} - ${log.endTime})"
             } else {
                 ""
             }
-            tvLogSummary.text = "گزارش ${log.date} - ${log.userName}$timeRange"
+            tvLogSummary.text = "📋 گزارش ${log.date} - ${log.userName}$timeRange"
 
-            // نمایش تیک‌های رنگی کاربرانی که دیده‌اند
-            displaySeenBy(log.seenBy)
-
-            tvActionDescription.text = "شرح اقدام: ${log.actionDescription}"
-
-            // گروه انجام دهنده - استفاده از UserCache.getName
-            if (log.assignedUsers.isNotEmpty()) {
-                val workerNames = log.assignedUsers.split(",").mapNotNull {
-                    val name = UserCache.getName(it.trim())
-                    if (name != "نامشخص" && !name.startsWith("کاربر")) name else null
-                }
-                if (workerNames.isNotEmpty()) {
-                    tvWorkers.text = "گروه انجام دهنده: ${workerNames.joinToString("، ")}"
-                    tvWorkers.visibility = View.VISIBLE
-                } else {
-                    tvWorkers.visibility = View.GONE
-                }
-            } else {
-                tvWorkers.visibility = View.GONE
+            // شرح اقدام
+            tvActionDescription.text = log.actionDescription
+            if (log.actionDescription.contains("برگشت داده شد")) {
+                tvActionDescription.setBackgroundColor(Color.parseColor("#FFEBEE"))
+                tvActionDescription.setTextColor(Color.parseColor("#D32F2F"))
             }
 
-            //tvTime.visibility = View.GONE
-
-            val durationText = if (log.startTime.isNotEmpty() && log.endTime.isNotEmpty()) {
-                try {
-                    val startHour = log.startTime.split(":")[0].toInt()
-                    val startMinute = log.startTime.split(":")[1].toInt()
-                    val endHour = log.endTime.split(":")[0].toInt()
-                    val endMinute = log.endTime.split(":")[1].toInt()
-
-                    var durationMinutes =
-                        (endHour * 60 + endMinute) - (startHour * 60 + startMinute)
-                    if (durationMinutes < 0) durationMinutes += 24 * 60
-
-                    val hours = durationMinutes / 60
-                    val minutes = durationMinutes % 60
-
-                    // ساخت متن مدت زمان بدون نمایش "و صفر دقیقه"
-                    when {
-                        hours > 0 && minutes > 0 -> "مدت زمان: $hours ساعت و $minutes دقیقه"
-                        hours > 0 && minutes == 0 -> "مدت زمان: $hours ساعت"
-                        hours == 0 && minutes > 0 -> "مدت زمان: $minutes دقیقه"
-                        else -> ""
-                    }
-                } catch (e: Exception) {
-                    ""
-                }
-            } else {
-                ""
-            }
-
+            // مدت زمان
+            val durationText = calculateDurationText(log.startTime, log.endTime)
             if (durationText.isNotEmpty()) {
-                tvDuration.text = durationText
+                tvDuration.text = "⏱ $durationText"
                 tvDuration.visibility = View.VISIBLE
             } else {
                 tvDuration.visibility = View.GONE
             }
 
+            // ====== گروه انجام‌دهنده (فقط در صورت مشارکت جزئی) ======
+            val assignedToFullList = task.assignedTo.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val responsibleId = task.responsible
+
+            val logWorkers = log.assignedUsers.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+
+            val allMembers = assignedToFullList.toMutableSet()
+            if (responsibleId.isNotEmpty() && responsibleId != "0") {
+                allMembers.add(responsibleId)
+            }
+
+            val allParticipated = allMembers.isNotEmpty() && allMembers.all { it in logWorkers }
+
+            if (!allParticipated && logWorkers.isNotEmpty()) {
+                val workerNames = logWorkers.mapNotNull {
+                    val name = UserCache.getName(it)
+                    if (name != "نامشخص" && !name.startsWith("کاربر")) name else null
+                }
+
+                if (workerNames.isNotEmpty()) {
+                    val fullText = workerNames.joinToString("، ")
+                    tvWorkers.text = "👥 گروه انجام‌دهنده: $fullText"
+                    tvWorkers.visibility = View.VISIBLE
+                    dividerWorkers.visibility = View.VISIBLE
+
+                    val responsibleName = UserCache.getName(responsibleId)
+                    if (responsibleName.isNotEmpty() && responsibleName != "نامشخص" && responsibleName in workerNames) {
+                        val spannable = android.text.SpannableString(tvWorkers.text)
+                        val startIndex = tvWorkers.text.indexOf(responsibleName)
+                        if (startIndex != -1) {
+                            spannable.setSpan(
+                                android.text.style.ForegroundColorSpan(Color.parseColor("#1565C0")),
+                                startIndex,
+                                startIndex + responsibleName.length,
+                                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                            )
+                            tvWorkers.text = spannable
+                        }
+                    }
+                } else {
+                    tvWorkers.visibility = View.GONE
+                    dividerWorkers.visibility = View.GONE
+                }
+            } else {
+                tvWorkers.visibility = View.GONE
+                dividerWorkers.visibility = View.GONE
+            }
+
+            // ====== وضعیت جدید ======
             if (log.newStatus.isNotEmpty()) {
-                tvNewStatus.text = "آخرین وضعیت: ${Config.StatusCode.getText(log.newStatus)}"
-                tvNewStatus.visibility = View.VISIBLE
+                val statusText = Config.StatusCode.getText(log.newStatus)
+                tvNewStatus.text = "وضعیت جدید: $statusText"
+                statusContainer.visibility = View.VISIBLE
+
+                when (log.newStatus) {
+                    Config.StatusCode.IN_PROGRESS -> statusDot.setBackgroundColor(Color.parseColor("#1565C0"))
+                    Config.StatusCode.BLOCKED -> statusDot.setBackgroundColor(Color.parseColor("#C62828"))
+                    Config.StatusCode.SENT_TO_SUPERVISOR -> statusDot.setBackgroundColor(Color.parseColor("#6A1B9A"))
+                    Config.StatusCode.ARCHIVED -> statusDot.setBackgroundColor(Color.parseColor("#4E342E"))
+                    else -> statusDot.setBackgroundColor(Color.parseColor("#78909C"))
+                }
             } else {
-                tvNewStatus.visibility = View.GONE
+                statusContainer.visibility = View.GONE
             }
 
-            if (log.notes.isNotEmpty()) {
-                tvLogNotes.text = "توضیحات: ${log.notes}"
-                tvLogNotes.visibility = View.VISIBLE
-            } else {
-                tvLogNotes.visibility = View.GONE
-            }
+            // نمایش مشاهده‌کنندگان
+            displaySeenBy(log.seenBy)
 
-            // نمایش نظرات
+            // بخش ارزیابی
+            setupEvaluationSection(log)
+
+            // نظرات
             displayComments(log.comments, currentUserId)
 
-            // دکمه ثبت نظر فقط برای کارهای غیر بایگانی
+            // دکمه ثبت نظر
             val isArchived = task.status == "5"
             if (!isArchived) {
                 btnAddComment.visibility = View.VISIBLE
@@ -521,62 +552,10 @@ class TaskDetailAdapter(
                 btnAddComment.visibility = View.GONE
             }
 
-            setExpanded(isExpanded)
+            // دکمه‌های عملیاتی
+            setupActionButtons(log, task, currentUserId, userRole, onDelete)
 
-            itemView.findViewById<View>(R.id.headerLayout).setOnClickListener {
-                isExpanded = !isExpanded
-                setExpanded(isExpanded)
-            }
-
-            // منوی سه نقطه - فقط اگر کار بایگانی نشده باشد و کاربر خودش باشد
-            val canEditDelete = !isArchived && log.userId == currentUserId
-            if (canEditDelete) {
-                ivMenu.visibility = View.VISIBLE
-                ivMenu.setOnClickListener { view ->
-                    PopupMenu(view.context, view).apply {
-                        menu.add(0, 1, 0, "ویرایش")
-                        menu.add(0, 2, 0, "حذف")
-                        setOnMenuItemClickListener { menuItem ->
-                            when (menuItem.itemId) {
-                                1 -> {
-                                    val context = view.context
-                                    val intent = Intent(context, AddLogActivity::class.java).apply {
-                                        putExtra("IS_EDIT_MODE", true)
-                                        putExtra("LOG_ID", log.id)
-                                        putExtra("TASK_ID", log.taskId)
-                                        putExtra("TITLE", task.title)
-                                        putExtra("DESC", task.description)
-                                        putExtra("CREATOR", task.creator)
-                                        putExtra("DATE", task.createDate)
-                                        putExtra("RESPONSIBLE", task.responsible)
-                                        putExtra("ASSIGNED_TO", task.assignedTo)
-                                        putExtra("UNIT", task.unit)
-                                        putExtra("PRIORITY", task.priority)
-                                        putExtra("SUB_UNIT", task.sub_unit)
-                                        putExtra("DECLARATION_METHOD", task.declaration_method)
-                                        putExtra("REQUESTER", task.requester)
-                                        putExtra("REQUEST_DATE", task.request_date)
-                                        putExtra("INITIAL_REVIEW", task.initial_review)
-                                        putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
-                                        putExtra("URGENCY", task.urgency)
-                                    }
-                                    context.startActivity(intent)
-                                }
-                                2 -> {
-                                    Toast.makeText(view.context, "حذف گزارش", Toast.LENGTH_SHORT).show()
-                                    onDeleteCallback(log)
-                                }
-                            }
-                            true
-                        }
-                        show()
-                    }
-                }
-            } else {
-                ivMenu.visibility = View.GONE
-            }
-
-            // بعد از setExpanded(isExpanded) یا در انتهای متد bind
+            // کلیک روی کارت
             itemView.setOnClickListener {
                 val context = itemView.context
                 val intent = Intent(context, TaskLogDetailActivity::class.java).apply {
@@ -586,32 +565,312 @@ class TaskDetailAdapter(
                 }
                 context.startActivity(intent)
             }
-        }
 
-        private fun setExpanded(expanded: Boolean) {
-            if (expanded) {
-                ivExpand.setImageResource(R.drawable.ic_chevron_up)
-                divider.visibility = View.VISIBLE
-                detailLayout.visibility = View.VISIBLE
-
-                displaySeenBy(currentLog.seenBy)
-
-                // ثبت دیده شدن گزارش
-                if (::currentUserId.isInitialized && currentUserId.isNotEmpty()) {
-                    SeenManager.markAsSeen(
-                        itemView.context,
-                        currentUserId,
-                        listOf(SeenItem("TASK_LOG", currentLog.id))
-                    )
-                }
-            } else {
-                ivExpand.setImageResource(R.drawable.ic_chevron_down)
-                divider.visibility = View.GONE
-                detailLayout.visibility = View.GONE
+            // ثبت دیده شدن
+            if (::currentUserId.isInitialized && currentUserId.isNotEmpty()) {
+                SeenManager.markAsSeen(
+                    itemView.context,
+                    currentUserId,
+                    listOf(SeenItem("TASK_LOG", currentLog.id))
+                )
             }
         }
 
+        // ==================== بخش ارزیابی ====================
+        private fun setupEvaluationSection(log: TaskLogModel) {
+            val hasEvaluationData = log.heatLevel > 30 ||
+                    log.pollutionLevel > 0 ||
+                    log.physicalDifficulty > 0 ||
+                    log.technicalComplexity > 0
+
+            if (!hasEvaluationData) {
+                evaluationContainer.visibility = View.GONE
+                return
+            }
+
+            evaluationContainer.visibility = View.VISIBLE
+            dividerEvaluation.visibility = View.VISIBLE
+
+            // هدر ارزیابی
+            val tvEvaluationTitle = evaluationHeader.findViewById<TextView>(R.id.tvEvaluationTitle)
+            tvEvaluationTitle.text = "📊 ارزیابی گزارش"
+            tvEvaluationTitle.setTextColor(Color.parseColor("#555555"))
+
+            // دمای هوا
+            if (log.heatLevel > 30) {
+                tvHeatLevel.text = "🌡️ دمای هوا: ${log.heatLevel}°C"
+                tvHeatLevel.visibility = View.VISIBLE
+            } else {
+                tvHeatLevel.visibility = View.GONE
+            }
+
+            // میزان آلودگی
+            if (log.pollutionLevel > 0) {
+                tvPollutionLevel.text = "🏭 میزان آلودگی: ${log.pollutionLevel} ppm"
+                tvPollutionLevel.visibility = View.VISIBLE
+            } else {
+                tvPollutionLevel.visibility = View.GONE
+            }
+
+            // سختی فیزیکی
+            if (log.physicalDifficulty > 0) {
+                tvPhysicalDifficulty.text = "💪 سختی فیزیکی: ${Config.Evaluation.getPhysicalText(log.physicalDifficulty)}"
+                tvPhysicalDifficulty.visibility = View.VISIBLE
+            } else {
+                tvPhysicalDifficulty.visibility = View.GONE
+            }
+
+            // پیچیدگی فنی
+            if (log.technicalComplexity > 0) {
+                tvTechnicalComplexity.text = "🔧 پیچیدگی فنی: ${Config.Evaluation.getTechnicalText(log.technicalComplexity)}"
+                tvTechnicalComplexity.visibility = View.VISIBLE
+            } else {
+                tvTechnicalComplexity.visibility = View.GONE
+            }
+
+            // حالت بسته پیش‌فرض
+            isEvaluationExpanded = false
+            evaluationDetail.visibility = View.GONE
+            ivEvaluationExpand.setImageResource(R.drawable.ic_chevron_down)
+            ivEvaluationExpand.setColorFilter(Color.parseColor("#888888"))
+
+            evaluationHeader.setOnClickListener {
+                isEvaluationExpanded = !isEvaluationExpanded
+                if (isEvaluationExpanded) {
+                    evaluationDetail.visibility = View.VISIBLE
+                    ivEvaluationExpand.setImageResource(R.drawable.ic_chevron_up)
+                } else {
+                    evaluationDetail.visibility = View.GONE
+                    ivEvaluationExpand.setImageResource(R.drawable.ic_chevron_down)
+                }
+            }
+        }
+
+        // ==================== دکمه‌های عملیاتی ====================
+        private fun setupActionButtons(
+            log: TaskLogModel,
+            task: TaskModel,
+            currentUserId: String,
+            userRole: String,
+            onDelete: (TaskLogModel) -> Unit
+        ) {
+            val isArchived = task.status == "5"
+            val canEvaluate = !isArchived && (log.userId == currentUserId || userRole == Config.RoleCode.SUPERVISOR)
+            val canEditDelete = !isArchived && log.userId == currentUserId
+
+            var hasVisibleButton = false
+
+            if (canEvaluate) {
+                btnEvaluate.visibility = View.VISIBLE
+                btnEvaluate.setOnClickListener {
+                    val intent = Intent(itemView.context, EvaluationActivity::class.java).apply {
+                        putExtra("TASK_ID", task.id)
+                        putExtra("LOG_ID", log.id)
+                        putExtra("TASK_TITLE", task.title)
+                        putExtra("TASK_DATE", log.date)
+                        putExtra("TASK_START_TIME", log.startTime)
+                        putExtra("TASK_END_TIME", log.endTime)
+                        putExtra("TASK_DESCRIPTION", log.actionDescription)
+                        putExtra("ASSIGNED_USERS", log.assignedUsers)
+                        putExtra("DURATION_MINUTES", calculateDurationInMinutes(log.startTime, log.endTime))
+                        putExtra("IS_FROM_DETAIL", true)
+                    }
+                    itemView.context.startActivity(intent)
+                }
+                hasVisibleButton = true
+            } else {
+                btnEvaluate.visibility = View.GONE
+            }
+
+            if (canEditDelete) {
+                btnEdit.visibility = View.VISIBLE
+                btnEdit.setOnClickListener {
+                    val intent = Intent(itemView.context, AddLogActivity::class.java).apply {
+                        putExtra("IS_EDIT_MODE", true)
+                        putExtra("LOG_ID", log.id)
+                        putExtra("TASK_ID", log.taskId)
+                        putExtra("TITLE", task.title)
+                        putExtra("DESC", task.description)
+                        putExtra("CREATOR", task.creator)
+                        putExtra("DATE", task.createDate)
+                        putExtra("RESPONSIBLE", task.responsible)
+                        putExtra("ASSIGNED_TO", task.assignedTo)
+                        putExtra("UNIT", task.unit)
+                        putExtra("PRIORITY", task.priority)
+                        putExtra("SUB_UNIT", task.sub_unit)
+                        putExtra("DECLARATION_METHOD", task.declaration_method)
+                        putExtra("REQUESTER", task.requester)
+                        putExtra("REQUEST_DATE", task.request_date)
+                        putExtra("INITIAL_REVIEW", task.initial_review)
+                        putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
+                        putExtra("URGENCY", task.urgency)
+                    }
+                    itemView.context.startActivity(intent)
+                }
+                hasVisibleButton = true
+            } else {
+                btnEdit.visibility = View.GONE
+            }
+
+            if (canEditDelete) {
+                btnDelete.visibility = View.VISIBLE
+                btnDelete.setOnClickListener {
+                    onDelete(log)
+                }
+                hasVisibleButton = true
+            } else {
+                btnDelete.visibility = View.GONE
+            }
+
+            actionButtonsContainer.visibility = if (hasVisibleButton) View.VISIBLE else View.GONE
+            dividerButtons.visibility = if (hasVisibleButton) View.VISIBLE else View.GONE
+        }
+
+        // ==================== توابع کمکی ====================
+        private fun calculateDurationText(startTime: String, endTime: String): String {
+            if (startTime.isEmpty() || endTime.isEmpty()) return ""
+
+            return try {
+                val startHour = startTime.split(":")[0].toInt()
+                val startMinute = startTime.split(":")[1].toInt()
+                val endHour = endTime.split(":")[0].toInt()
+                val endMinute = endTime.split(":")[1].toInt()
+
+                var durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute)
+                if (durationMinutes < 0) durationMinutes += 24 * 60
+
+                val hours = durationMinutes / 60
+                val minutes = durationMinutes % 60
+
+                when {
+                    hours > 0 && minutes > 0 -> "مدت زمان: $hours ساعت و $minutes دقیقه"
+                    hours > 0 && minutes == 0 -> "مدت زمان: $hours ساعت"
+                    hours == 0 && minutes > 0 -> "مدت زمان: $minutes دقیقه"
+                    else -> ""
+                }
+            } catch (e: Exception) {
+                ""
+            }
+        }
+
+        private fun calculateDurationInMinutes(startTime: String, endTime: String): Int {
+            try {
+                val startParts = startTime.split(":")
+                val endParts = endTime.split(":")
+                if (startParts.size == 2 && endParts.size == 2) {
+                    val startHour = startParts[0].toInt()
+                    val startMinute = startParts[1].toInt()
+                    val endHour = endParts[0].toInt()
+                    val endMinute = endParts[1].toInt()
+                    var duration = (endHour * 60 + endMinute) - (startHour * 60 + startMinute)
+                    if (duration < 0) duration += 24 * 60
+                    return duration
+                }
+            } catch (e: Exception) { }
+            return 0
+        }
+
+        // ==================== نمایش مشاهده‌کنندگان ====================
+        private fun displaySeenBy(seenBy: List<String>) {
+            val container = itemView.findViewById<LinearLayout>(R.id.seenByContainer)
+            container.removeAllViews()
+
+            if (seenBy.isEmpty()) {
+                container.visibility = View.GONE
+                dividerSeenBy.visibility = View.GONE
+                return
+            }
+
+            container.visibility = View.VISIBLE
+            dividerSeenBy.visibility = View.VISIBLE
+
+            // برچسب
+            val label = TextView(itemView.context).apply {
+                text = "👁  "
+                textSize = 12f
+                setTextColor(Color.parseColor("#78909C"))
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                    marginEnd = 2.dpToPx()
+                }
+            }
+            container.addView(label)
+
+            val maxDisplay = 6
+            val toShow = seenBy.take(maxDisplay)
+            val remaining = seenBy.size - maxDisplay
+
+            toShow.forEach { userId ->
+                val userName = UserCache.getName(userId)
+                val firstLetter = if (userName.isNotEmpty() && userName != "نامشخص") {
+                    userName.firstOrNull()?.toString()?.uppercase() ?: "?"
+                } else {
+                    "?"
+                }
+                val circleView = createSmallCircleWithLetter(firstLetter, userId)
+                container.addView(circleView)
+            }
+
+            if (remaining > 0) {
+                val moreView = TextView(itemView.context).apply {
+                    text = "+$remaining"
+                    textSize = 10f
+                    setTextColor(Color.parseColor("#78909C"))
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        gravity = Gravity.CENTER_VERTICAL
+                        marginStart = 4.dpToPx()
+                    }
+                }
+                container.addView(moreView)
+            }
+        }
+
+        private fun createSmallCircleWithLetter(letter: String, userId: String): View {
+            return TextView(itemView.context).apply {
+                text = letter
+                textSize = 10f
+                setTextColor(Color.WHITE)
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+
+                val size = 22.dpToPx()
+                layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                    marginEnd = 4.dpToPx()
+                }
+
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(getColorForUserId(userId))
+                }
+            }
+        }
+
+        private fun getColorForUserId(userId: String): Int {
+            val colors = listOf(
+                "#E91E63", "#9C27B0", "#673AB7", "#3F51B5",
+                "#2196F3", "#03A9F4", "#00BCD4", "#009688",
+                "#4CAF50", "#8BC34A", "#CDDC39", "#FFEB3B",
+                "#FFC107", "#FF9800", "#FF5722", "#795548"
+            )
+            val index = userId.hashCode().mod(colors.size)
+            return Color.parseColor(colors[index])
+        }
+
+        fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
+
+        // ==================== نظرات ====================
+
         private fun displayComments(commentsJson: String, currentUserId: String) {
+            val tvCommentLabel: TextView = itemView.findViewById(R.id.tvCommentLabel)
+            val commentsContainer: LinearLayout = itemView.findViewById(R.id.commentsContainer)
+
             commentsContainer.removeAllViews()
 
             if (commentsJson.isEmpty() || commentsJson == "[]") {
@@ -688,10 +947,11 @@ class TaskDetailAdapter(
         }
 
         private fun showAddCommentDialog() {
-            val editText = EditText(itemView.context)
-            editText.hint = "نظر خود را وارد کنید..."
-            editText.inputType = android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            editText.setLines(3)
+            val editText = EditText(itemView.context).apply {
+                hint = "نظر خود را وارد کنید..."
+                inputType = android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                setLines(3)
+            }
 
             AlertDialog.Builder(itemView.context)
                 .setTitle("ثبت نظر")
@@ -779,75 +1039,6 @@ class TaskDetailAdapter(
             )
             VolleySingleton.getInstance(itemView.context).add(request)
         }
-
-        private fun displaySeenBy(seenBy: List<String>) {
-            val container = itemView.findViewById<LinearLayout>(R.id.seenByContainer)
-            container.removeAllViews()
-
-            if (seenBy.isEmpty()) return
-
-            val maxDisplay = 6
-            val toShow = seenBy.take(maxDisplay)
-            val remaining = seenBy.size - maxDisplay
-
-            toShow.forEach { userId ->
-                val userName = UserCache.getName(userId)
-                val firstLetter = if (userName.isNotEmpty() && userName != "نامشخص")
-                    userName.firstOrNull()?.toString()?.uppercase() ?: "?"
-                else "?"
-
-                val circleView = createSmallCircleWithLetter(firstLetter, userId)
-                container.addView(circleView)
-            }
-
-            if (remaining > 0) {
-                val moreView = TextView(itemView.context).apply {
-                    text = "+$remaining"
-                    textSize = 9f
-                    setTextColor(Color.BLACK)
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        gravity = Gravity.CENTER_VERTICAL
-                        marginEnd = 2.dpToPx()
-                    }
-                }
-                container.addView(moreView)
-            }
-        }
-
-        private fun createSmallCircleWithLetter(letter: String, userId: String): View {
-            return TextView(itemView.context).apply {
-                text = letter
-                textSize = 8f
-                setTextColor(Color.WHITE)
-                gravity = Gravity.CENTER
-
-                val size = 16.dpToPx()
-                layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                    marginEnd = 2.dpToPx()
-                }
-
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(getColorForUserId(userId))
-                }
-            }
-        }
-
-        private fun getColorForUserId(userId: String): Int {
-            val colors = listOf(
-                "#E91E63", "#9C27B0", "#673AB7", "#3F51B5",
-                "#2196F3", "#03A9F4", "#00BCD4", "#009688",
-                "#4CAF50", "#8BC34A", "#CDDC39", "#FFEB3B",
-                "#FFC107", "#FF9800", "#FF5722", "#795548"
-            )
-            val index = userId.hashCode().mod(colors.size)
-            return Color.parseColor(colors[index])
-        }
-
-        fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
     }
 
     class AddLogViewHolder(

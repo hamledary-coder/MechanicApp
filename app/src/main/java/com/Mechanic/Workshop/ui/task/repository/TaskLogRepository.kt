@@ -2,6 +2,7 @@ package com.Mechanic.Workshop.ui.task.repository
 
 import android.content.Context
 import android.util.Log
+import com.Mechanic.Workshop.data.model.ReportGroup
 import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.utils.VolleySingleton
@@ -17,7 +18,6 @@ import java.io.IOException
 
 class TaskLogRepository(private val context: Context) {
 
-    // 1. دریافت لیست گزارش‌ها (Volley)
     fun getTaskLogs(taskId: String, onSuccess: (List<TaskLogModel>) -> Unit, onError: (String) -> Unit) {
         val timestamp = System.currentTimeMillis()
         val sharedPref = context.getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
@@ -27,14 +27,11 @@ class TaskLogRepository(private val context: Context) {
         val request = object : StringRequest(
             Request.Method.GET, url,
             { response ->
-
                 try {
                     val jsonArray = JSONArray(response)
                     val logs = mutableListOf<TaskLogModel>()
                     for (i in 0 until jsonArray.length()) {
                         val obj = jsonArray.getJSONObject(i)
-
-                        // ✅ خواندن seen_by
                         val seenBy = mutableListOf<String>()
                         val seenByStr = obj.optString("seen_by", "[]")
                         if (seenByStr.isNotEmpty() && seenByStr != "[]") {
@@ -47,27 +44,30 @@ class TaskLogRepository(private val context: Context) {
                                 Log.e("TaskLogRepo", "Error parsing seen_by: ${e.message}")
                             }
                         }
-
-                        logs.add(TaskLogModel(
-                            id = obj.getString("id"),
-                            taskId = obj.getString("task_id"),
-                            userId = obj.getString("user_id"),
-                            userName = obj.optString("user_name", ""),
-                            date = obj.optString("date", ""),
-                            startTime = obj.optString("start_time", ""),
-                            endTime = obj.optString("end_time", ""),
-                            actionDescription = obj.optString("action_description", ""),
-                            assignedUsers = obj.optString("assigned_users", ""),
-                            newStatus = obj.optString("new_status", ""),
-                            attachments = "",
-                            notes = obj.optString("notes", ""),
-                            duration = "",
-                            comments = obj.optString("comments", "[]"),
-                            heatLevel = obj.optInt("heat_level", 30),
-                            pollutionLevel = obj.optInt("pollution_level", 0),
-                            workType = obj.optString("work_type", "fixed_equipment"),
-                            seenBy = seenBy  // ← اضافه شد
-                        ))
+                        logs.add(
+                            TaskLogModel(
+                                id = obj.getString("id"),
+                                taskId = obj.getString("task_id"),
+                                userId = obj.getString("user_id"),
+                                userName = obj.optString("user_name", ""),
+                                date = obj.optString("date", ""),
+                                startTime = obj.optString("start_time", ""),
+                                endTime = obj.optString("end_time", ""),
+                                actionDescription = obj.optString("action_description", ""),
+                                assignedUsers = obj.optString("assigned_users", ""),
+                                newStatus = obj.optString("new_status", ""),
+                                attachments = "",
+                                notes = obj.optString("notes", ""),
+                                duration = "",
+                                comments = obj.optString("comments", "[]"),
+                                heatLevel = obj.optInt("heat_level", 30),
+                                pollutionLevel = obj.optInt("pollution_level", 0),
+                                workType = obj.optString("work_type", "fixed_equipment"),
+                                seenBy = seenBy,
+                                physicalDifficulty = obj.optInt("physical_difficulty", 0),
+                                technicalComplexity = obj.optInt("technical_complexity", 0)
+                            )
+                        )
                     }
                     onSuccess(logs)
                 } catch (e: Exception) {
@@ -86,15 +86,12 @@ class TaskLogRepository(private val context: Context) {
                 )
             }
         }
-
         VolleySingleton.getInstance(context).add(request)
     }
 
-    // 2. ثبت گزارش جدید (OkHttp)
     fun addTaskLog(log: TaskLogModel, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val client = OkHttpClient()
         val url = "${Config.BASE_URL}?action=addTaskLog"
-
         val jsonObject = JSONObject().apply {
             put("taskId", log.taskId)
             put("userId", log.userId)
@@ -106,28 +103,25 @@ class TaskLogRepository(private val context: Context) {
             put("assignedUsers", log.assignedUsers)
             put("newStatus", log.newStatus)
             put("notes", log.notes)
-            put("heatLevel",log.heatLevel)
+            put("heatLevel", log.heatLevel)
             put("pollutionLevel", log.pollutionLevel)
             put("workType", log.workType)
+            put("physicalDifficulty", log.physicalDifficulty)
+            put("technicalComplexity", log.technicalComplexity)
         }
-
         val jsonString = jsonObject.toString()
         Log.d("TaskLogRepo", "OkHttp Sending: $jsonString")
-
         val mediaType = "application/json; charset=utf-8".toMediaType()
         val body = jsonString.toRequestBody(mediaType)
-
         val request = okhttp3.Request.Builder()
             .url(url)
             .post(body)
             .build()
-
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e("TaskLogRepo", "OkHttp Error: ${e.message}")
                 onError(e.message ?: "Network error")
             }
-
             override fun onResponse(call: Call, response: Response) {
                 val responseBody = response.body?.string() ?: ""
                 Log.d("TaskLogRepo", "OkHttp Response: $responseBody")
@@ -149,7 +143,6 @@ class TaskLogRepository(private val context: Context) {
         })
     }
 
-    // 3. ویرایش گزارش (Volley)
     fun updateTaskLog(log: TaskLogModel, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val url = "${Config.BASE_URL}?action=updateTaskLog"
         val jsonObject = JSONObject().apply {
@@ -161,11 +154,12 @@ class TaskLogRepository(private val context: Context) {
             put("assignedUsers", log.assignedUsers)
             put("newStatus", log.newStatus)
             put("notes", log.notes)
-            put("heatLevel",log.heatLevel)
+            put("heatLevel", log.heatLevel)
             put("pollutionLevel", log.pollutionLevel)
             put("workType", log.workType)
+            put("physicalDifficulty", log.physicalDifficulty)
+            put("technicalComplexity", log.technicalComplexity)
         }
-
         val request = JsonObjectRequest(
             Request.Method.POST, url, jsonObject,
             { response ->
@@ -179,19 +173,16 @@ class TaskLogRepository(private val context: Context) {
                 onError("خطا در اتصال به شبکه: ${error.message}")
             }
         )
-
         VolleySingleton.getInstance(context).add(request)
     }
 
-    // 4. حذف گزارش (Volley)
     fun deleteTaskLog(logId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val url = "${Config.BASE_URL}?action=deleteTaskLog&logId=$logId"
-        Log.d("DELETE", "URL: $url")  // ← لاگ
 
         val request = JsonObjectRequest(
             Request.Method.GET, url, null,
             { response ->
-                Log.d("DELETE", "Response: $response")  // ← لاگ
+
                 if (response.optString("status") == "success") {
                     onSuccess()
                 } else {
@@ -199,10 +190,11 @@ class TaskLogRepository(private val context: Context) {
                 }
             },
             { error ->
-                Log.e("DELETE", "Error: ${error.message}")  // ← لاگ
+
                 onError("خطا در اتصال به شبکه: ${error.message}")
             }
         )
         VolleySingleton.getInstance(context).add(request)
     }
+
 }

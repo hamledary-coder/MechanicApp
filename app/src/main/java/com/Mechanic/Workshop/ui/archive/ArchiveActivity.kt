@@ -136,12 +136,8 @@ class ArchiveActivity : AppCompatActivity() {
             },
             onReferClick = { task ->
                 Toast.makeText(this, "کار‌های بایگانی شده قابل ارجاع نیستند", Toast.LENGTH_SHORT).show()
-            },
-            onVolunteerClick = { task ->
-                Toast.makeText(this, "کار‌های بایگانی شده قابل داوطلبی نیستند", Toast.LENGTH_SHORT).show()
-            },
-            onItemClick = { task -> openTaskDetail(task) }
-        )
+            }
+        ) { task -> openTaskDetail(task) }
         recyclerView.adapter = adapter
     }
 

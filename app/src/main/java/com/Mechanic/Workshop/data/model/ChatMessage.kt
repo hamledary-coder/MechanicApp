@@ -5,5 +5,5 @@ data class ChatMessage(
     val sender_id: Int,
     val sender_name: String,
     val message: String,
-    val created_at: String  // فرمت "2025-04-10 14:35:00"
+    val created_at: String
 )

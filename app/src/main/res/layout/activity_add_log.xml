@@ -1,14 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="12dp"
-    android:fillViewport="true"
-    android:background="#F5F5F5"
-    android:layoutDirection="rtl">
+    android:orientation="vertical"
+    android:background="#F5F5F5">
 
-    <LinearLayout
+    <!-- ====== Toolbar ====== -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/primary_blue"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:titleTextColor="@android:color/white"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="12dp"
+        android:fillViewport="true"
+        android:layoutDirection="rtl">
+
+        <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
@@ -233,34 +248,6 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ====== دکمه ثبت اصلی ====== -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="#FFFFFF">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="16dp">
-
-                <Button
-                    android:id="@+id/btnSubmit"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:text="📋 ثبت گزارش"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:backgroundTint="#2E7D32"
-                    android:stateListAnimator="@null" />
-
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
-
         <!-- ====== کارت 4: تیم اجرایی (اختیاری - جمع‌شونده) ====== -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardTeam"
@@ -336,10 +323,8 @@
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
-
-        <!-- ====== کارت 5: شرایط کار (اختیاری - جمع‌شونده) ====== -->
+        <!-- ====== دکمه ثبت اصلی ====== -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardWorkCondition"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
@@ -350,57 +335,22 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:padding="16dp">
 
-                <LinearLayout
-                    android:id="@+id/headerWorkCondition"
+                <Button
+                    android:id="@+id/btnSubmit"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical"
-                    android:background="?attr/selectableItemBackground">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="🌡 شرایط کار"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="#666" />
-
-                    <ImageView
-                        android:id="@+id/ivExpandWorkCondition"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_chevron_down"
-                        android:rotation="0" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/contentWorkCondition"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:paddingTop="0dp"
-                    android:visibility="gone">
-
-                    <Button
-                        android:id="@+id/btnWorkCondition"
-                        android:layout_width="match_parent"
-                        android:layout_height="44dp"
-                        android:text="⚙️ تنظیم شرایط کار"
-                        android:backgroundTint="#607D8B"
-                        android:textSize="13sp" />
-
-                </LinearLayout>
+                    android:layout_height="52dp"
+                    android:text="📋 ثبت گزارش"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:backgroundTint="#2E7D32"
+                    android:stateListAnimator="@null" />
 
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
+
 
         <!-- ====== کارت 6: توضیحات تکمیلی (اختیاری - جمع‌شونده) ====== -->
         <com.google.android.material.card.MaterialCardView
@@ -482,4 +432,6 @@
 
     </LinearLayout>
 
-</ScrollView>
+    </ScrollView>
+
+</LinearLayout>

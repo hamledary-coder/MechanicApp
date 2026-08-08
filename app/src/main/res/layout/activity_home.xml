@@ -84,19 +84,67 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- سطر اول کارت‌ها (کارتابل و بایگانی) - فاصله کمتر -->
+            <!-- سطر اول کارت‌ها (ثبت گزارش سریع + کارتابل) - فاصله کمتر -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_marginBottom="16dp">
 
-                <!-- کارت کارتابل -->
+                <!-- ۱. کارت ثبت گزارش سریع (جایگاه اول) -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardQuickLog"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:clipChildren="false"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="3dp"
+                    app:cardPreventCornerOverlap="false">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/ic_quick_log"
+                            android:tint="@color/primary_green"
+                            android:contentDescription="ثبت گزارش سریع" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="ثبت گزارش"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="ثبت گزارش سریع"
+                            android:textSize="11sp"
+                            android:textColor="@color/primary_green" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- ۲. کارت کارتابل (جایگاه دوم) -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/cardCartable"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="12dp"
+                    android:layout_marginStart="12dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
@@ -129,17 +177,82 @@
                             android:textColor="@color/text_primary" />
 
                         <TextView
-                            android:id="@+id/tvCartableCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="۰ کار"
-                            android:textSize="12sp"
+                            android:layout_marginTop="4dp"
+                            android:text="تقسیم وظایف"
+                            android:textSize="11sp"
                             android:textColor="@color/primary_blue" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- کارت بایگانی -->
+            </LinearLayout>
+
+            <!-- سطر دوم کارت‌ها (گزارشات و بایگانی) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <!-- ۳. کارت گزارشات روزانه (جایگاه سوم) -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardReports"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:clipChildren="false"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="3dp"
+                    app:cardPreventCornerOverlap="false">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/ic_pdf_file"
+                            android:tint="@color/primary_blue"
+                            android:contentDescription="گزارشات" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="گزارشات"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="خلاصه گزارشات روزانه"
+                            android:textSize="11sp"
+                            android:textColor="@color/primary_blue" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="مخصوص رییس"
+                            android:textSize="10dp"
+                            android:textColor="@color/primary_blue" />
+
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- ۴. کارت بایگانی (جایگاه چهارم) -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/cardArchive"
                     android:layout_width="0dp"
@@ -188,13 +301,13 @@
 
             </LinearLayout>
 
-            <!-- سطر دوم کارت‌ها (تنظیمات و گفتگو) - فاصله کمتر -->
+            <!-- سطر سوم (تنظیمات و گفتگو) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <!-- کارت تنظیمات -->
+                <!-- ۵. کارت تنظیمات (جایگاه پنجم) -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/cardSettings"
                     android:layout_width="0dp"
@@ -241,7 +354,7 @@
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- کارت گفتگو -->
+                <!-- ۶. کارت گفتگو (جایگاه ششم) -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/cardChat"
                     android:layout_width="0dp"

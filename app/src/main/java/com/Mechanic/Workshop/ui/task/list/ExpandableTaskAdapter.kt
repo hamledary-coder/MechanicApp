@@ -9,10 +9,8 @@ import android.graphics.Color
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.ForegroundColorSpan
-import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.PopupMenu
 import androidx.recyclerview.widget.RecyclerView
@@ -27,7 +25,6 @@ class ExpandableTaskAdapter(
     private val onEditClick: (TaskModel) -> Unit,
     private val onDeleteClick: (TaskModel) -> Unit,
     private val onReferClick: (TaskModel) -> Unit,
-    private val onVolunteerClick: (TaskModel) -> Unit,
     private val onItemClick: ((TaskModel) -> Unit)? = null
 ) : RecyclerView.Adapter<ExpandableTaskAdapter.ViewHolder>() {
 
@@ -131,23 +128,31 @@ class ExpandableTaskAdapter(
 
     private fun setStripColor(holder: ViewHolder, task: TaskModel) {
         val colorStrip = holder.itemView.findViewById<View>(R.id.colorStrip)
+        val sharedPref = holder.itemView.context.getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+        val userRole = sharedPref.getString(Config.PrefKeys.USER_ROLE, "") ?: ""
 
-        when {
-            // گزارش جدید دارد → آبی
-            task.hasUnseenReport && (userRole == Config.RoleCode.SUPERVISOR || userRole == Config.RoleCode.MANAGER) -> {
-                colorStrip.setBackgroundColor(Color.parseColor("#2196F3"))  // آبی
-                colorStrip.visibility = View.VISIBLE
-            }
-            // درخواست تایید اتمام کار (status=41) → قرمز
-            task.status == "41" && userRole == Config.RoleCode.SUPERVISOR -> {
-                colorStrip.setBackgroundColor(Color.parseColor("#F44336"))  // قرمز
-                colorStrip.visibility = View.VISIBLE
-            }
-            // حالت عادی → خاکستری
-            else -> {
-                colorStrip.visibility = View.GONE
-            }
+        // ✅ برای کارمند در وضعیت 41، نوار سمت راست رو مخفی کن
+        if (task.status == "41" && userRole == Config.RoleCode.EMPLOYEE) {
+            colorStrip.visibility = View.GONE
+            return
         }
+
+        // گزارش جدید دارد → آبی (برای سرشیفت و مدیر)
+        if (task.hasUnseenReport && (userRole == Config.RoleCode.SUPERVISOR || userRole == Config.RoleCode.MANAGER)) {
+            colorStrip.setBackgroundColor(Color.parseColor("#2196F3"))
+            colorStrip.visibility = View.VISIBLE
+            return
+        }
+
+        // ✅ درخواست تایید (status=41) برای سرشیفت → بنفش (تغییر از قرمز)
+        if (task.status == "41" && userRole == Config.RoleCode.SUPERVISOR) {
+            colorStrip.setBackgroundColor(Color.parseColor("#9C27B0"))  // ← بنفش
+            colorStrip.visibility = View.VISIBLE
+            return
+        }
+
+        // حالت عادی → مخفی
+        colorStrip.visibility = View.GONE
     }
 
     private fun setTopStripColor(holder: ViewHolder, task: TaskModel) {
@@ -170,6 +175,14 @@ class ExpandableTaskAdapter(
                 topStrip.visibility = View.GONE  // ← مخفی کن
             }
         }
+
+        // ✅ وضعیت 41 برای کارمند → نوار سبز
+        if (task.status == "41" && userRole == Config.RoleCode.EMPLOYEE) {
+            topStrip.setBackgroundColor(Color.parseColor("#4CAF50"))
+            topStrip.visibility = View.VISIBLE
+            return
+        }
+
     }
     private fun setupMenu(holder: ViewHolder, task: TaskModel) {
         if (tabType != "archived" && (userRole == Config.RoleCode.MANAGER || userRole == Config.RoleCode.SUPERVISOR)) {
