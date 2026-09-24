@@ -273,6 +273,7 @@ object EvaluationCalculator {
                 isTechnical = isTechnical
             )
 
+
             val fullCoeff = physicalTotalCoeff + technicalCoeff + responsibilityCoeff
 
             // لیست نفرات
