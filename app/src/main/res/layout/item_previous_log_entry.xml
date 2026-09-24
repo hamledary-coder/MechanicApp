@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:paddingVertical="4dp">
 
-    <!-- سطر اول: تاریخ، ساعت و کاربر -->
+    <!-- سطر اول: نام روز + تاریخ + ساعت و کاربر -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -17,6 +17,16 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginEnd="12dp">
+
+            <TextView
+                android:id="@+id/tvDayName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="سه‌شنبه"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginEnd="4dp" />
 
             <TextView
                 android:id="@+id/tvLogDate"
@@ -38,7 +48,7 @@
 
         </LinearLayout>
 
-        <!-- ✅ نام کاربر با bg_user_pill -->
+        <!-- نام کاربر -->
         <TextView
             android:id="@+id/tvLogUser"
             android:layout_width="wrap_content"
@@ -53,6 +63,7 @@
 
     </LinearLayout>
 
+    <!-- شرح اقدام -->
     <TextView
         android:id="@+id/tvLogAction"
         android:layout_width="match_parent"

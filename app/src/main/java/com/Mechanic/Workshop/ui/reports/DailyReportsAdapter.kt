@@ -12,6 +12,7 @@ import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.model.ReportGroup
 import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.data.remote.Config
+import com.Mechanic.Workshop.utils.DateUtils
 import com.Mechanic.Workshop.utils.UserCache
 import java.util.Calendar
 
@@ -84,16 +85,24 @@ class DailyReportsAdapter(
                 val logView = LayoutInflater.from(holder.itemView.context)
                     .inflate(R.layout.item_log_entry, holder.currentDayLogsContainer, false)
 
+                val tvDayName = logView.findViewById<TextView>(R.id.tvDayName)
                 val tvLogDate = logView.findViewById<TextView>(R.id.tvLogDate)
                 val tvLogTime = logView.findViewById<TextView>(R.id.tvLogTime)
                 val tvLogAction = logView.findViewById<TextView>(R.id.tvLogAction)
                 val tvLogUser = logView.findViewById<TextView>(R.id.tvLogUser)
                 val divider = logView.findViewById<View>(R.id.divider)
 
+                // ✅ تنظیم نام روز هفته
+                val dayName = DateUtils.getDayNameFromDate(log.date)
+                tvDayName.text = dayName
                 tvLogDate.text = log.date
                 tvLogTime.text = log.startTime
                 tvLogAction.text = log.actionDescription
+
+                // نام کاربر
                 tvLogUser.text = log.userName
+                tvLogUser.setBackgroundResource(R.drawable.bg_user_pill)
+                tvLogUser.setPadding(12, 2, 12, 2)
                 tvLogUser.setBackgroundResource(R.drawable.bg_user_pill)
                 tvLogUser.setPadding(12, 2, 12, 2)
 

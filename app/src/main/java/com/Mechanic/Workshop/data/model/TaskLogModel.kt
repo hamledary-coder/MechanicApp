@@ -20,5 +20,6 @@ data class TaskLogModel(
     val workType: String = "fixed_equipment",
     val seenBy: List<String> = emptyList(),
     val physicalDifficulty: Int = 0,
-    val technicalComplexity: Int = 0
+    val technicalComplexity: Int = 0,
+    val taskUrgency: String = "عادی"
 )

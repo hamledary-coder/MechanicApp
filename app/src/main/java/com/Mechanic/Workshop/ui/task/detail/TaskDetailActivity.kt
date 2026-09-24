@@ -39,6 +39,7 @@ class TaskDetailActivity : AppCompatActivity() {
     companion object {
         private const val STATUS_IN_PROGRESS = "2"
         private const val STATUS_BLOCKED = "3"
+        private const val STATUS_COMPLETE_REQUEST = "4"      // ← اضافه کن
         private const val STATUS_SENT_TO_SUPERVISOR = "41"
         private const val STATUS_ARCHIVED = "5"
     }
@@ -324,7 +325,8 @@ class TaskDetailActivity : AppCompatActivity() {
         val isResponsible = task.responsible == currentUserId
 
         when {
-            isResponsible && task.status == STATUS_SENT_TO_SUPERVISOR -> {
+            // ✅ مسئول با وضعیت 4 → به 41 تغییر بده
+            isResponsible && task.status == STATUS_COMPLETE_REQUEST -> {
                 updateTaskStatusDirectly(STATUS_SENT_TO_SUPERVISOR) { success ->
                     if (success) {
                         Toast.makeText(this, "درخواست تأیید به سرشیفت ارسال شد", Toast.LENGTH_SHORT).show()
@@ -334,6 +336,7 @@ class TaskDetailActivity : AppCompatActivity() {
                     }
                 }
             }
+            // ✅ سرشیفت با وضعیت 41 → به صفحه تکمیل کار برو
             userRole == Config.RoleCode.SUPERVISOR && task.status == STATUS_SENT_TO_SUPERVISOR -> {
                 startActivity(Intent(this, CompleteTaskActivity::class.java).apply {
                     putExtra("TASK_ID", task.id)

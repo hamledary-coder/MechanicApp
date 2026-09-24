@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
+        android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -89,6 +90,10 @@
             android:name=".ui.task.quicklog.QuickLogActivity"
             android:parentActivityName=".ui.home.HomeActivity"
             android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.reports.PersonnelReportActivity"
+            android:parentActivityName=".ui.home.HomeActivity" />
 
         <!-- ✅ FileProvider رو داخل application قرار بده -->
         <provider

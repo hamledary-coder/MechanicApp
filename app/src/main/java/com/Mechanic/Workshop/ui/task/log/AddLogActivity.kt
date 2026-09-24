@@ -59,6 +59,7 @@ class AddLogActivity : AppCompatActivity() {
     private lateinit var taskLogRepository: TaskLogRepository
     private var isEditMode = false
     private var editingLogId: String? = null
+    private var editingLog: TaskLogModel? = null
 
     // متغیر برای جلوگیری از بارگذاری مکرر
     private var isUserCacheLoaded = false
@@ -66,7 +67,7 @@ class AddLogActivity : AppCompatActivity() {
     companion object {
         private const val STATUS_CONTINUE = "2"
         private const val STATUS_STOPPED = "3"
-        private const val STATUS_SENT_TO_SUPERVISOR = "41"  // ← جدید
+        private const val STATUS_SENT_TO_SUPERVISOR = "41"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -189,6 +190,11 @@ class AddLogActivity : AppCompatActivity() {
     }
 
     private fun populateLogData(log: TaskLogModel, allLogs: List<TaskLogModel> = emptyList()) {
+
+        Log.d("AddLog1", "✅ editingLog set: $editingLog")  // ← این خط رو اضافه کن
+        Log.d("AddLog1", "✅ log.heatLevel: ${log.heatLevel}")  // ← این خط رو اضافه کن
+
+        editingLog = log
         etActionDescription.setText(log.actionDescription)
         etDate.setText(log.date)
         etStartTime.setText(log.startTime)
@@ -250,8 +256,8 @@ class AddLogActivity : AppCompatActivity() {
             .setTodayButton("امروز")
             .setTodayButtonVisible(true)
             .setInitDate(initYear, initMonth, initDay)
-            .setMinYear(1400)
-            .setMaxYear(PersianDatePickerDialog.THIS_YEAR)
+            .setMinYear(1404)
+            .setMaxYear(PersianDatePickerDialog.THIS_YEAR + 1)
             .setListener(object : PersianPickerListener {
                 override fun onDateSelected(persianPickerDate: PersianPickerDate) {
                     val year = persianPickerDate.persianYear
@@ -484,7 +490,7 @@ class AddLogActivity : AppCompatActivity() {
             0 -> STATUS_CONTINUE
             1 -> STATUS_STOPPED
             2 -> STATUS_SENT_TO_SUPERVISOR  // ← تغییر
-            else -> STATUS_CONTINUE
+            else -> STATUS_STOPPED
         }
     }
 
@@ -509,6 +515,9 @@ class AddLogActivity : AppCompatActivity() {
     private fun createTaskLogModel(status: String): TaskLogModel {
         val (userId, userName) = getCurrentUserInfo()
 
+        // اگر در حالت ویرایش هستیم، از لاگ اصلی استفاده کن
+        val sourceLog = if (isEditMode) editingLog else null
+
         return TaskLogModel(
             id = if (isEditMode) editingLogId ?: "" else System.currentTimeMillis().toString(),
             taskId = task?.id ?: "",
@@ -520,37 +529,40 @@ class AddLogActivity : AppCompatActivity() {
             actionDescription = etActionDescription.text.toString(),
             assignedUsers = currentGroupIds,
             newStatus = status,
-            attachments = "",
+            attachments = sourceLog?.attachments ?: "",
             notes = getFinalNotes(),
-            heatLevel = 30,
-            pollutionLevel = 0,
-            workType = "1",
-            physicalDifficulty = 0,
-            technicalComplexity = 0
+            // ✅ مهم: اینا رو از لاگ اصلی نگه دار
+            heatLevel = sourceLog?.heatLevel ?: 30,
+            pollutionLevel = sourceLog?.pollutionLevel ?: 0,
+            workType = sourceLog?.workType ?: "1",
+            physicalDifficulty = sourceLog?.physicalDifficulty ?: 0,
+            technicalComplexity = sourceLog?.technicalComplexity ?: 0,
+            seenBy = sourceLog?.seenBy ?: emptyList(),
+            duration = sourceLog?.duration ?: "",
+            comments = sourceLog?.comments ?: "[]",
+            taskUrgency = task?.urgency ?: "عادی"
         )
     }
 
     private fun submitLog() {
         val selectedStatus = getSelectedStatus()
-        val newTaskStatus = getNewTaskStatus(selectedStatus)
-
-        updateTaskStatusDirectly(newTaskStatus)
-
         val log = createTaskLogModel(selectedStatus)
 
         taskLogRepository.addTaskLog(
             log = log,
-            // در متد submitLog، بعد از onSuccess:
-            onSuccess = {
+            onSuccess = { logIdFromServer ->
                 runOnUiThread {
                     enableButton(btnSubmit)
                     Toast.makeText(this, "گزارش با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
                     setResult(RESULT_OK)
 
+                    val newTaskStatus = getNewTaskStatus(selectedStatus)
+                    updateTaskStatusDirectly(newTaskStatus)
+
                     // 🔥 باز کردن صفحه ارزیابی
                     val intent = Intent(this, EvaluationActivity::class.java).apply {
                         putExtra("TASK_ID", task?.id ?: "")
-                        putExtra("LOG_ID", log.id)
+                        putExtra("LOG_ID", logIdFromServer)  // ← اینجا logIdFromServer رو استفاده کن
                         putExtra("TASK_TITLE", task?.title ?: "")
                         putExtra("TASK_DATE", etDate.text.toString())
                         putExtra("TASK_START_TIME", etStartTime.text.toString())
@@ -558,7 +570,6 @@ class AddLogActivity : AppCompatActivity() {
                         putExtra("TASK_DESCRIPTION", etActionDescription.text.toString())
                         putExtra("ASSIGNED_USERS", currentGroupIds)
                         putExtra("DURATION_MINUTES", calculateDuration())
-                        // IS_FROM_DETAIL ارسال نمی‌شود (یا false)
                     }
                     startActivity(intent)
                     finish()
@@ -574,6 +585,11 @@ class AddLogActivity : AppCompatActivity() {
     }
 
     private fun updateLog() {
+
+        Log.d("AddLog1", "========== UPDATE LOG ==========")
+        Log.d("AddLog1", "isEditMode: $isEditMode")
+        Log.d("AddLog1", "editingLog: $editingLog")  // ← این خط رو اضافه کن
+
         val selectedStatus = getSelectedStatus()
         val newTaskStatus = getNewTaskStatus(selectedStatus)
 
@@ -601,15 +617,24 @@ class AddLogActivity : AppCompatActivity() {
     }
 
     private fun updateTaskStatusDirectly(newStatus: String) {
+        Log.d("AddLog", "updateTaskStatusDirectly called with: $newStatus")
+
         val url = "${Config.BASE_URL}?action=updateTaskStatus"
         val jsonObject = JSONObject().apply {
             put("taskId", task?.id ?: "")
             put("status", newStatus)
         }
+
+        Log.d("AddLog", "Sending JSON: ${jsonObject.toString()}")
+
         val request = JsonObjectRequest(
             Request.Method.POST, url, jsonObject,
-            { _ -> },
-            { error -> Log.e("AddLog", "Error updating task status to $newStatus: ${error.message}") }
+            { response ->
+                Log.d("AddLog", "Server response: ${response.toString()}")
+            },
+            { error ->
+                Log.e("AddLog", "Error: ${error.message}")
+            }
         )
         VolleySingleton.getInstance(this).add(request)
     }

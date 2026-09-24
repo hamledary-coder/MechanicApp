@@ -58,6 +58,7 @@ class TaskLogRepository(private val context: Context) {
                                 newStatus = obj.optString("new_status", ""),
                                 attachments = "",
                                 notes = obj.optString("notes", ""),
+                                taskUrgency = obj.optString("task_urgency", "عادی"),
                                 duration = "",
                                 comments = obj.optString("comments", "[]"),
                                 heatLevel = obj.optInt("heat_level", 30),
@@ -89,8 +90,7 @@ class TaskLogRepository(private val context: Context) {
         VolleySingleton.getInstance(context).add(request)
     }
 
-    fun addTaskLog(log: TaskLogModel, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        val client = OkHttpClient()
+    fun addTaskLog(log: TaskLogModel, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         val url = "${Config.BASE_URL}?action=addTaskLog"
         val jsonObject = JSONObject().apply {
             put("taskId", log.taskId)
@@ -101,47 +101,30 @@ class TaskLogRepository(private val context: Context) {
             put("endTime", log.endTime)
             put("actionDescription", log.actionDescription)
             put("assignedUsers", log.assignedUsers)
-            put("newStatus", log.newStatus)
+            put("newStatus", log.newStatus)  // ← اینجا newStatus رو میفرسته
             put("notes", log.notes)
-            put("heatLevel", log.heatLevel)
-            put("pollutionLevel", log.pollutionLevel)
-            put("workType", log.workType)
-            put("physicalDifficulty", log.physicalDifficulty)
-            put("technicalComplexity", log.technicalComplexity)
         }
-        val jsonString = jsonObject.toString()
-        Log.d("TaskLogRepo", "OkHttp Sending: $jsonString")
-        val mediaType = "application/json; charset=utf-8".toMediaType()
-        val body = jsonString.toRequestBody(mediaType)
-        val request = okhttp3.Request.Builder()
-            .url(url)
-            .post(body)
-            .build()
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("TaskLogRepo", "OkHttp Error: ${e.message}")
-                onError(e.message ?: "Network error")
-            }
-            override fun onResponse(call: Call, response: Response) {
-                val responseBody = response.body?.string() ?: ""
-                Log.d("TaskLogRepo", "OkHttp Response: $responseBody")
-                if (response.isSuccessful) {
-                    try {
-                        val jsonResponse = JSONObject(responseBody)
-                        if (jsonResponse.optString("status") == "success") {
-                            onSuccess()
-                        } else {
-                            onError(jsonResponse.optString("message", "Unknown error"))
-                        }
-                    } catch (e: Exception) {
-                        onError("Parse error: ${e.message}")
-                    }
+
+
+        val request = JsonObjectRequest(
+            Request.Method.POST, url, jsonObject,
+            { response ->
+                Log.d("TaskLogRepo", "Response: $response")
+                if (response.optString("status") == "success") {
+                    val logId = response.optString("logId", log.id)
+                    onSuccess(logId)
                 } else {
-                    onError("HTTP ${response.code}: $responseBody")
+                    onError(response.optString("message", "Unknown error"))
                 }
+            },
+            { error ->
+                Log.e("TaskLogRepo", "Volley Error: ${error.message}")
+                onError("Network error: ${error.message}")
             }
-        })
+        )
+        VolleySingleton.getInstance(context).add(request)
     }
+
 
     fun updateTaskLog(log: TaskLogModel, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val url = "${Config.BASE_URL}?action=updateTaskLog"
@@ -173,6 +156,7 @@ class TaskLogRepository(private val context: Context) {
                 onError("خطا در اتصال به شبکه: ${error.message}")
             }
         )
+
         VolleySingleton.getInstance(context).add(request)
     }
 

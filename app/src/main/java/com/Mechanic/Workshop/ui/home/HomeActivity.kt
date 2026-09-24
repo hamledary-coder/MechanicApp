@@ -13,6 +13,7 @@ import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.archive.ArchiveActivity
 import com.Mechanic.Workshop.ui.cartable.CartableActivity
 import com.Mechanic.Workshop.ui.chat.ChatActivity
+import com.Mechanic.Workshop.ui.reports.PersonnelReportActivity
 import com.Mechanic.Workshop.ui.reports.ReportsActivity
 import com.Mechanic.Workshop.ui.settings.SettingsActivity
 import com.Mechanic.Workshop.ui.task.quicklog.QuickLogActivity
@@ -34,7 +35,8 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var cardChat: CardView
     private lateinit var cardQuickLog: CardView
 
-    // متغیر برای جلوگیری از درخواست‌های همزمان
+    private lateinit var cardPersonnelReport: CardView
+
     private var isChecking = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,12 +47,14 @@ class HomeActivity : AppCompatActivity() {
         setupToolbar()
         loadUserData()
         setupClickListeners()
+
+        // ====== اطمینان از خاموش بودن کارت در ابتدا ======
+        setQuickLogCardEnabled(false)
     }
 
-    // ====== اضافه کردن onResume برای به‌روزرسانی ======
     override fun onResume() {
         super.onResume()
-        // وقتی کاربر از صفحات دیگر برمی‌گردد، وضعیت را مجدداً بررسی کن
+        // وقتی از صفحه ثبت گزارش برمی‌گردیم، دوباره بررسی کن
         checkUserHasResponsibleTasks()
     }
 
@@ -65,6 +69,7 @@ class HomeActivity : AppCompatActivity() {
         cardSettings = findViewById(R.id.cardSettings)
         cardChat = findViewById(R.id.cardChat)
         cardQuickLog = findViewById(R.id.cardQuickLog)
+        cardPersonnelReport = findViewById(R.id.cardPersonnelReport)
     }
 
     private fun setupToolbar() {
@@ -85,22 +90,27 @@ class HomeActivity : AppCompatActivity() {
             runOnUiThread {
                 showLoading(false)
                 disableCards(false)
-                // بررسی اولیه
+
+                // ====== بعد از بارگذاری کش، وضعیت را بررسی کن ======
                 checkUserHasResponsibleTasks()
             }
         }
     }
 
+    // ====== متد کمکی برای تغییر وضعیت کارت ======
+    private fun setQuickLogCardEnabled(enabled: Boolean) {
+        cardQuickLog.isEnabled = enabled
+        cardQuickLog.alpha = if (enabled) 1.0f else 0.5f
+    }
+
     private fun checkUserHasResponsibleTasks() {
-        // جلوگیری از درخواست‌های همزمان
         if (isChecking) return
 
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
         val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
 
         if (currentUserId.isEmpty()) {
-            cardQuickLog.isEnabled = false
-            cardQuickLog.alpha = 0.5f
+            setQuickLogCardEnabled(false)
             return
         }
 
@@ -114,20 +124,13 @@ class HomeActivity : AppCompatActivity() {
                 isChecking = false
                 val hasTasks = response.length() > 0
                 runOnUiThread {
-                    if (hasTasks) {
-                        cardQuickLog.isEnabled = true
-                        cardQuickLog.alpha = 1.0f
-                    } else {
-                        cardQuickLog.isEnabled = false
-                        cardQuickLog.alpha = 0.5f
-                    }
+                    setQuickLogCardEnabled(hasTasks)
                 }
             },
             { error ->
                 isChecking = false
                 runOnUiThread {
-                    cardQuickLog.isEnabled = false
-                    cardQuickLog.alpha = 0.5f
+                    setQuickLogCardEnabled(false)
                 }
             }
         )
@@ -154,6 +157,10 @@ class HomeActivity : AppCompatActivity() {
 
         cardChat.setOnClickListener {
             startActivity(Intent(this, ChatActivity::class.java))
+        }
+
+        cardPersonnelReport.setOnClickListener {
+            startActivity(Intent(this, PersonnelReportActivity::class.java))
         }
 
         cardQuickLog.setOnClickListener {

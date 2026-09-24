@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:layout_marginHorizontal="2dp"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <!-- مقدار روی نوار -->
+<TextView
+android:id="@+id/tvBarValue"
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:text="48:00"
+android:textSize="8sp"
+android:textColor="#333"
+android:gravity="center"
+android:layout_marginBottom="2dp"
+android:paddingTop="2dp"
+android:maxLines="1" />
+
+    <!-- خود نوار -->
+<View
+android:id="@+id/barView"
+android:layout_width="match_parent"
+android:layout_height="0dp"
+android:layout_weight="1"
+android:minHeight="4dp"
+android:background="@drawable/bar_chart_gradient" />
+
+    <!-- اسم کاربر -->
+<TextView
+android:id="@+id/tvBarLabel"
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:text="علی"
+android:textSize="8sp"
+android:textColor="#555"
+android:gravity="center"
+android:layout_marginTop="3dp"
+android:maxLines="2"
+android:minLines="2"
+android:ellipsize="end"
+android:lineSpacingExtra="1dp" />
+
+    </LinearLayout>

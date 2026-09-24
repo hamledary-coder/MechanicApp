@@ -238,7 +238,7 @@ object ReportsPdfGenerator {
                         )
 
                         // ✅ دریافت نام روز هفته
-                        val dayName = getDayNameFromDate(log.date)
+                        val dayName = DateUtils.getDayNameFromDate(log.date)
                         val logDate = DateUtils.toPersianNumber(log.date)
                         val logTime = DateUtils.toPersianNumber(log.startTime)
 
@@ -416,42 +416,7 @@ object ReportsPdfGenerator {
         }
     }
 
-    // ========== تابع دریافت نام روز هفته از تاریخ شمسی ==========
-    private fun getDayNameFromDate(shamsiDate: String): String {
-        if (shamsiDate.isEmpty()) return ""
 
-        try {
-            // تبدیل تاریخ شمسی به میلادی (تقریبی)
-            val parts = shamsiDate.split("/")
-            if (parts.size != 3) return ""
-
-            val year = parts[0].toInt()
-            val month = parts[1].toInt()
-            val day = parts[2].toInt()
-
-            // تبدیل تقریبی شمسی به میلادی
-            val gregorianYear = year + 621
-            val calendar = Calendar.getInstance()
-            calendar.set(gregorianYear, month - 1, day)
-
-            // تنظیم مجدد برای دقت بیشتر
-            // اصلاح اختلاف روزها
-            calendar.add(Calendar.DAY_OF_YEAR, -79)
-
-            return when (calendar.get(Calendar.DAY_OF_WEEK)) {
-                Calendar.SATURDAY -> "شنبه"
-                Calendar.SUNDAY -> "یکشنبه"
-                Calendar.MONDAY -> "دوشنبه"
-                Calendar.TUESDAY -> "سه‌شنبه"
-                Calendar.WEDNESDAY -> "چهارشنبه"
-                Calendar.THURSDAY -> "پنج‌شنبه"
-                Calendar.FRIDAY -> "جمعه"
-                else -> ""
-            }
-        } catch (e: Exception) {
-            return ""
-        }
-    }
 
     // ========== تابع دریافت نام گروه انجام‌دهنده ==========
     private fun getGroupNames(assignedUsers: String): String {

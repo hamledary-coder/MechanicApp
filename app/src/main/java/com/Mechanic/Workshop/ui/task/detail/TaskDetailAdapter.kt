@@ -29,6 +29,7 @@ import android.graphics.Color
 import androidx.cardview.widget.CardView
 import com.Mechanic.Workshop.ui.task.evaluation.EvaluationActivity
 import com.Mechanic.Workshop.ui.task.log.TaskLogDetailActivity
+import com.Mechanic.Workshop.utils.DateUtils
 import com.Mechanic.Workshop.utils.SeenItem
 import com.Mechanic.Workshop.utils.SeenManager
 import com.Mechanic.Workshop.utils.UserCache
@@ -450,6 +451,16 @@ class TaskDetailAdapter(
                 ""
             }
             tvLogSummary.text = "📋 گزارش ${log.date} - ${log.userName}$timeRange"
+
+            // در bind
+            val dayOfWeek = DateUtils.getDayNameFromDate(log.date)
+            val dateDisplay = if (dayOfWeek.isNotEmpty()) {
+                "${log.date} ($dayOfWeek)"
+            } else {
+                log.date
+            }
+
+            tvLogSummary.text = "📋 گزارش $dateDisplay - ${log.userName}$timeRange"
 
             // شرح اقدام
             tvActionDescription.text = log.actionDescription

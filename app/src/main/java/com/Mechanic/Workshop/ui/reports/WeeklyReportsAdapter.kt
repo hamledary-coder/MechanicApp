@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.model.ReportGroup
 import com.Mechanic.Workshop.data.remote.Config
+import com.Mechanic.Workshop.utils.DateUtils
 import com.Mechanic.Workshop.utils.UserCache
 
 class WeeklyReportsAdapter(
@@ -22,11 +23,11 @@ class WeeklyReportsAdapter(
         val tvTaskId: TextView = itemView.findViewById(R.id.tvTaskId)
         val tvReportCount: TextView = itemView.findViewById(R.id.tvReportCount)
         val tvTaskTitle: TextView = itemView.findViewById(R.id.tvTaskTitle)
+        val tvTaskDescription: TextView = itemView.findViewById(R.id.tvTaskDescription)
         val tvResponsible: TextView = itemView.findViewById(R.id.tvResponsible)
         val tvStatus: TextView = itemView.findViewById(R.id.tvStatus)
         val logsListContainer: LinearLayout = itemView.findViewById(R.id.logsListContainer)
         val btnViewDetails: TextView = itemView.findViewById(R.id.btnViewDetails)
-        val tvTaskDescription: TextView = itemView.findViewById(R.id.tvTaskDescription)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -52,35 +53,36 @@ class WeeklyReportsAdapter(
             holder.tvTaskDescription.visibility = View.GONE
         }
 
-        // ✅ استفاده از UserCache برای دریافت نام مسئول
+        // ======== مسئول ========
         val responsibleName = if (reportGroup.taskResponsible.isNotEmpty() && reportGroup.taskResponsible != "0") {
             UserCache.getName(reportGroup.taskResponsible)
         } else {
             "تعیین نشده"
         }
         holder.tvResponsible.text = "مسئول: $responsibleName"
-
         holder.tvStatus.text = "وضعیت: ${Config.StatusCode.getText(reportGroup.taskStatus)}"
 
-        // ======== نمایش هر گزارش به صورت مجزا ========
+        // ======== نمایش هر گزارش ========
         holder.logsListContainer.removeAllViews()
 
         for ((index, log) in logs.withIndex()) {
-            // ایجاد ویو برای هر گزارش
             val logView = LayoutInflater.from(holder.itemView.context)
                 .inflate(R.layout.item_log_entry, holder.logsListContainer, false)
 
+            val tvDayName = logView.findViewById<TextView>(R.id.tvDayName)
             val tvLogDate = logView.findViewById<TextView>(R.id.tvLogDate)
             val tvLogTime = logView.findViewById<TextView>(R.id.tvLogTime)
             val tvLogAction = logView.findViewById<TextView>(R.id.tvLogAction)
             val tvLogUser = logView.findViewById<TextView>(R.id.tvLogUser)
             val divider = logView.findViewById<View>(R.id.divider)
 
+            // ✅ تنظیم نام روز هفته
+            val dayName = DateUtils.getDayNameFromDate(log.date)
+            tvDayName.text = dayName
             tvLogDate.text = log.date
             tvLogTime.text = log.startTime
             tvLogAction.text = log.actionDescription
 
-            // ✅ نام کاربر با UserCache
             val userName = if (log.userId.isNotEmpty()) {
                 UserCache.getName(log.userId)
             } else {

@@ -421,7 +421,7 @@ class CompleteTaskActivity : AppCompatActivity() {
             notes = "علت برگشت: $reason",
             heatLevel = 30,
             pollutionLevel = 0,
-            workType = "fixed_equipment"
+            workType = "3"
         )
 
         taskLogRepository.addTaskLog(
