@@ -188,66 +188,6 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ====== کارت 3: وضعیت کار ====== -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="#FFFFFF">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="📊 وضعیت کار *"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="#FF9800"
-                    android:layout_marginBottom="12dp" />
-
-                <Spinner
-                    android:id="@+id/spinnerNewStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:background="@drawable/bg_spinner_rounded"
-                    android:padding="8dp"
-                    android:layout_marginBottom="12dp" />
-
-                <!-- کادر شرطی (شرح اقدام بعدی / علت توقف) -->
-                <TextView
-                    android:id="@+id/tvConditionalLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="📌 شرح اقدام بعدی"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="#E65100"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginBottom="8dp"
-                    android:visibility="gone" />
-
-                <EditText
-                    android:id="@+id/etConditionalText"
-                    android:layout_width="match_parent"
-                    android:layout_height="80dp"
-                    android:hint="برنامه بعدی را وارد کنید..."
-                    android:gravity="top"
-                    android:inputType="textMultiLine"
-                    android:background="@drawable/bg_edittext_rounded"
-                    android:padding="12dp"
-                    android:visibility="gone" />
-
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
-
         <!-- ====== کارت 4: تیم اجرایی (اختیاری - جمع‌شونده) ====== -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardTeam"
@@ -323,6 +263,7 @@
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
+
         <!-- ====== دکمه ثبت اصلی ====== -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -350,7 +291,6 @@
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
-
 
         <!-- ====== کارت 6: توضیحات تکمیلی (اختیاری - جمع‌شونده) ====== -->
         <com.google.android.material.card.MaterialCardView

@@ -21,11 +21,13 @@ import com.Mechanic.Workshop.ui.task.log.AddLogActivity
 import com.Mechanic.Workshop.utils.VolleySingleton
 import TaskModel
 import android.annotation.SuppressLint
+import android.content.res.ColorStateList
 import android.content.res.Resources
 import android.graphics.drawable.GradientDrawable
 import android.util.Log
 import android.view.Gravity
 import android.graphics.Color
+import android.widget.ImageButton
 import androidx.cardview.widget.CardView
 import com.Mechanic.Workshop.ui.task.evaluation.EvaluationActivity
 import com.Mechanic.Workshop.ui.task.log.TaskLogDetailActivity
@@ -37,6 +39,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.chip.ChipGroup
 
 
 class TaskDetailAdapter(
@@ -52,7 +57,11 @@ class TaskDetailAdapter(
     private val currentUserId: String = "",
     private val userRole: String = "",
     private val buttonMode: String = "HIDDEN",
-    private val onButtonClick: () -> Unit = {}
+    private val onButtonClick: () -> Unit = {},
+    private val onEditTaskClick: () -> Unit = {},
+    private val onDeleteTaskClick: () -> Unit = {},
+    private val onReferTaskClick: () -> Unit = {},
+    private val onStatusChange: (String) -> Unit = {}
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -96,6 +105,12 @@ class TaskDetailAdapter(
             TYPE_ADD_LOG -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_add_log, parent, false)
+
+                val currentUserId = view.context
+                    .getSharedPreferences(Config.PrefKeys.USER_PREFS, Context.MODE_PRIVATE)
+                    .getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+                val isResponsible = task.responsible == currentUserId
+
                 AddLogViewHolder(
                     view,
                     onAddLogClick,
@@ -103,7 +118,11 @@ class TaskDetailAdapter(
                     showCompleteButton,
                     canAddLog,
                     buttonMode,
-                    onButtonClick
+                    onButtonClick,
+                    onStatusChange,
+                    task.status,
+                    isResponsible,
+                    logs.isNotEmpty()
                 )
             }
             TYPE_TASK_LOG -> {
@@ -119,7 +138,13 @@ class TaskDetailAdapter(
         val hasAddLog = buttonMode != "HIDDEN"
 
         when (holder) {
-            is TaskInfoViewHolder -> holder.bind(task)
+            is TaskInfoViewHolder -> holder.bind(
+                task = task,
+                userRole = userRole,
+                onEditTask = onEditTaskClick,
+                onDeleteTask = onDeleteTaskClick,
+                onReferTask = onReferTaskClick
+            )
             is AddLogViewHolder -> {
                 // کاری نداره، دکمه قبلاً در onCreateViewHolder ست شده
             }
@@ -177,7 +202,18 @@ class TaskDetailAdapter(
         private val cardDescription: CardView = itemView.findViewById(R.id.cardDescription)
         private val cardInitialReview: CardView = itemView.findViewById(R.id.cardInitialReview)
 
-        fun bind(task: TaskModel) {
+        private val taskActionButtons: LinearLayout = itemView.findViewById(R.id.taskActionButtons)
+        private val btnEditTask: ImageButton = itemView.findViewById(R.id.btnEditTask)
+        private val btnDeleteTask: ImageButton = itemView.findViewById(R.id.btnDeleteTask)
+        private val btnReferTask: ImageButton = itemView.findViewById(R.id.btnReferTask)
+
+        fun bind(
+            task: TaskModel,
+            userRole: String,
+            onEditTask: () -> Unit,
+            onDeleteTask: () -> Unit,
+            onReferTask: () -> Unit
+        ) {
             tvTaskId.text = "#${task.id}"
             tvTaskTitle.text = task.title
 
@@ -284,6 +320,19 @@ class TaskDetailAdapter(
                 layoutReferredBy.visibility = View.VISIBLE
             } else {
                 layoutReferredBy.visibility = View.GONE
+            }
+
+            // ====== دکمه‌های عملیاتی ======
+            val canManageTask = userRole == Config.RoleCode.MANAGER || userRole == Config.RoleCode.SUPERVISOR
+            val isArchived = task.status == "5"
+
+            if (canManageTask && !isArchived) {
+                taskActionButtons.visibility = View.VISIBLE
+                btnEditTask.setOnClickListener { onEditTask() }
+                btnDeleteTask.setOnClickListener { onDeleteTask() }
+                btnReferTask.setOnClickListener { onReferTask() }
+            } else {
+                taskActionButtons.visibility = View.GONE
             }
 
             // مشاهده‌کنندگان
@@ -1059,39 +1108,110 @@ class TaskDetailAdapter(
         showCompleteButton: Boolean,
         canAddLog: Boolean,
         private val buttonMode: String,
-        private val onButtonClick: () -> Unit
+        private val onButtonClick: () -> Unit,
+        private val onStatusChange: (String) -> Unit,
+        private val currentStatus: String,
+        private val isResponsible: Boolean,
+        private val hasLogs: Boolean
     ) : RecyclerView.ViewHolder(itemView) {
+
         init {
             val btn = itemView.findViewById<Button>(R.id.btnAddLog)
+            val statusContainer = itemView.findViewById<LinearLayout>(R.id.statusButtonsContainer)
+            val btnContinue = itemView.findViewById<MaterialButton>(R.id.btnStatusContinue)
+            val btnBlocked = itemView.findViewById<MaterialButton>(R.id.btnStatusBlocked)
+            val btnComplete = itemView.findViewById<MaterialButton>(R.id.btnStatusComplete)
 
+            // ====== دکمه اصلی ======
             when (buttonMode) {
                 "ADD_LOG" -> {
-                    btn.text = "ثبت گزارش جدید"
-                    btn.setOnClickListener { onAddLogClick() }
-                    btn.visibility = View.VISIBLE
-                    btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        android.graphics.Color.parseColor("#9C27B0")
-                    )
+                    if (currentStatus == "41") {
+                        btn.visibility = View.GONE
+                    } else {
+                        btn.text = "ثبت گزارش جدید"
+                        btn.setOnClickListener { onAddLogClick() }
+                        btn.visibility = View.VISIBLE
+                        btn.backgroundTintList = ColorStateList.valueOf(
+                            Color.parseColor("#9C27B0")
+                        )
+                    }
                 }
                 "REQUEST_COMPLETE" -> {
                     btn.text = "اعلام اتمام کار"
                     btn.setOnClickListener { onCompleteTaskClick() }
                     btn.visibility = View.VISIBLE
-                    btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        android.graphics.Color.parseColor("#2E7D32")
+                    btn.backgroundTintList = ColorStateList.valueOf(
+                        Color.parseColor("#2E7D32")
                     )
                 }
                 "FINAL_REVIEW" -> {
                     btn.text = "بررسی و تأیید نهایی"
                     btn.setOnClickListener { onButtonClick() }
                     btn.visibility = View.VISIBLE
-                    btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        android.graphics.Color.parseColor("#FF9800")
+                    btn.backgroundTintList = ColorStateList.valueOf(
+                        Color.parseColor("#FF9800")
                     )
                 }
                 else -> {
                     btn.visibility = View.GONE
                 }
+            }
+
+            // ====== دکمه‌های وضعیت ======
+            if (isResponsible && hasLogs) {
+                statusContainer.visibility = View.VISIBLE
+
+                // رنگ‌های پررنگ (فعال)
+                val colorContinue = Color.parseColor("#1565C0")   // آبی
+                val colorBlocked = Color.parseColor("#C62828")    // قرمز
+                val colorComplete = Color.parseColor("#2E7D32")   // سبز
+
+                // رنگ‌های کم‌رنگ (غیرفعال)
+                val colorContinueLight = Color.parseColor("#90CAF9")
+                val colorBlockedLight = Color.parseColor("#EF9A9A")
+                val colorCompleteLight = Color.parseColor("#A5D6A7")
+
+                // ====== تنظیم رنگ‌ها بر اساس وضعیت فعلی ======
+                // ادامه
+                if (currentStatus == "2") {
+                    btnContinue.backgroundTintList = ColorStateList.valueOf(colorContinue)
+                    btnContinue.elevation = 8f       // سایه بیشتر
+                    btnContinue.alpha = 1.0f
+                } else {
+                    btnContinue.backgroundTintList = ColorStateList.valueOf(colorContinueLight)
+                    btnContinue.elevation = 0f
+                    btnContinue.alpha = 0.6f
+                }
+
+                // متوقف
+                if (currentStatus == "3") {
+                    btnBlocked.backgroundTintList = ColorStateList.valueOf(colorBlocked)
+                    btnBlocked.elevation = 8f
+                    btnBlocked.alpha = 1.0f
+                } else {
+                    btnBlocked.backgroundTintList = ColorStateList.valueOf(colorBlockedLight)
+                    btnBlocked.elevation = 0f
+                    btnBlocked.alpha = 0.6f
+                }
+
+                // اتمام
+                if (currentStatus == "41") {
+                    btnComplete.backgroundTintList = ColorStateList.valueOf(colorComplete)
+                    btnComplete.elevation = 8f
+                    btnComplete.alpha = 1.0f
+                } else {
+                    btnComplete.backgroundTintList = ColorStateList.valueOf(colorCompleteLight)
+                    btnComplete.elevation = 0f
+                    btnComplete.alpha = 0.6f
+                }
+
+                // ====== Listenerها ======
+                btnContinue.setOnClickListener { onStatusChange("2") }
+                btnBlocked.setOnClickListener { onStatusChange("3") }
+                btnComplete.setOnClickListener { onStatusChange("41") }
+
+            } else {
+                statusContainer.visibility = View.GONE
             }
         }
     }

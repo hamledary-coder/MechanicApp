@@ -13,7 +13,6 @@ import android.text.style.ForegroundColorSpan
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.PopupMenu
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.Mechanic.Workshop.R
@@ -32,9 +31,6 @@ import org.json.JSONArray
 class ExpandableTaskAdapter(
     private val tasks: List<TaskModel>,
     private val tabType: String,
-    private val onEditClick: (TaskModel) -> Unit,
-    private val onDeleteClick: (TaskModel) -> Unit,
-    private val onReferClick: (TaskModel) -> Unit,
     private val onItemClick: ((TaskModel) -> Unit)? = null
 ) : RecyclerView.Adapter<ExpandableTaskAdapter.ViewHolder>() {
 
@@ -47,7 +43,7 @@ class ExpandableTaskAdapter(
         val tvId: TextView = itemView.findViewById(R.id.tvTaskId)
         val tvTitle: TextView = itemView.findViewById(R.id.tvTaskTitle)
         val ivExpand: ImageView = itemView.findViewById(R.id.ivExpand)
-        val ivMenu: ImageView = itemView.findViewById(R.id.ivMenu)
+
         val divider: View = itemView.findViewById(R.id.divider)
         val detailLayout: View = itemView.findViewById(R.id.detailLayout)
 
@@ -132,7 +128,6 @@ class ExpandableTaskAdapter(
             }
         }
 
-        setupMenu(holder, task)
 
         holder.itemView.findViewById<View>(R.id.headerLayout).setOnClickListener {
             if (isExpanded) {
@@ -144,7 +139,7 @@ class ExpandableTaskAdapter(
             notifyDataSetChanged()
         }
 
-        if (tabType == "inProgress" || tabType == "myCartable" || tabType == "archived") {
+        if (onItemClick != null) {
             holder.itemView.setOnClickListener {
                 onItemClick?.invoke(task)
             }
@@ -207,47 +202,6 @@ class ExpandableTaskAdapter(
             return
         }
 
-    }
-
-    private fun setupMenu(holder: ViewHolder, task: TaskModel) {
-        if (tabType != "archived" && (userRole == Config.RoleCode.MANAGER || userRole == Config.RoleCode.SUPERVISOR)) {
-            holder.ivMenu.visibility = View.VISIBLE
-            holder.ivMenu.setOnClickListener { view ->
-                PopupMenu(view.context, view).apply {
-                    try {
-                        val field = PopupMenu::class.java.getDeclaredField("mPopup")
-                        field.isAccessible = true
-                        val menuPopup = field.get(this)
-                        menuPopup.javaClass.getDeclaredMethod("setForceShowIcon", Boolean::class.java)
-                            .invoke(menuPopup, true)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-
-                    menu.add(0, 1, 0, "ویرایش").setIcon(R.drawable.ic_edit).also {
-                        it.icon?.setTint(Color.MAGENTA)
-                    }
-                    menu.add(0, 2, 0, "حذف").setIcon(R.drawable.ic_delete).also {
-                        it.icon?.setTint(Color.RED)
-                    }
-                    menu.add(0, 3, 0, "ارجاع").setIcon(R.drawable.ic_refer).also {
-                        it.icon?.setTint(Color.BLUE)
-                    }
-
-                    setOnMenuItemClickListener { menuItem ->
-                        when (menuItem.itemId) {
-                            1 -> onEditClick(task)
-                            2 -> onDeleteClick(task)
-                            3 -> onReferClick(task)
-                        }
-                        true
-                    }
-                    show()
-                }
-            }
-        } else {
-            holder.ivMenu.visibility = View.GONE
-        }
     }
 
     // ========== تغییر اصلی اینجاست ==========
@@ -465,19 +419,10 @@ class ExpandableTaskAdapter(
 // ===== متدهای جدید برای جدول کارکرد =====
 
     private fun loadTaskPerformance(taskId: String, position: Int, holder: ViewHolder) {
-        Log.d("TaskPerf", "=== loadTaskPerformance START ===")
-        Log.d("TaskPerf", "taskId: $taskId, position: $position")
-
         val repository = EvaluationRepository(holder.itemView.context)
 
         repository.getTasks(listOf(taskId)) { tasks ->
-            Log.d("TaskPerf", "tasks size: ${tasks.size}")
-            Log.d("TaskPerf", "tasks: $tasks")
-
             repository.getTaskLogs(taskId) { logs ->
-                Log.d("TaskPerf", "logs size: ${logs.size}")
-                Log.d("TaskPerf", "logs: $logs")
-
                 if (logs.isEmpty()) {
                     Log.d("TaskPerf", "⚠️ logs is empty")
                     holder.rvTaskPerformance.visibility = View.GONE
@@ -496,12 +441,8 @@ class ExpandableTaskAdapter(
                     }
 
                     val indicators = EvaluationCalculator.aggregateIndicators(logs, tasks, coefficients)
-                    Log.d("TaskPerf", "indicators size: ${indicators.size}")
-                    Log.d("TaskPerf", "indicators: $indicators")
 
                     val displayData = EvaluationCalculator.toDisplayFormat(indicators)
-                    Log.d("TaskPerf", "displayData size: ${displayData.size}")
-                    Log.d("TaskPerf", "displayData: $displayData")
 
                     if (displayData.isEmpty()) {
                         Log.d("TaskPerf", "⚠️ displayData is empty! Checking each indicator...")
@@ -539,10 +480,6 @@ class ExpandableTaskAdapter(
         data: List<TaskPerformanceItem>,
         holder: ViewHolder
     ) {
-
-        Log.d("TaskPerf", "=== updateTaskPerformance ===")
-        Log.d("TaskPerf", "data size: ${data.size}")
-        Log.d("TaskPerf", "data: $data")
 
         if (data.isEmpty()) {
             holder.rvTaskPerformance.visibility = View.GONE

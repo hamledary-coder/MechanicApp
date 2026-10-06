@@ -2,6 +2,7 @@ package com.Mechanic.Workshop.ui.home
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -10,6 +11,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.cardview.widget.CardView
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
+import com.Mechanic.Workshop.data.sync.TaskSyncer
 import com.Mechanic.Workshop.ui.archive.ArchiveActivity
 import com.Mechanic.Workshop.ui.cartable.CartableActivity
 import com.Mechanic.Workshop.ui.chat.ChatActivity
@@ -22,6 +24,11 @@ import com.Mechanic.Workshop.utils.VolleySingleton
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonArrayRequest
 import org.json.JSONObject
+import androidx.lifecycle.lifecycleScope
+import com.Mechanic.Workshop.data.local.TaskLocalRepository
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 class HomeActivity : AppCompatActivity() {
 
@@ -34,10 +41,10 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var cardSettings: CardView
     private lateinit var cardChat: CardView
     private lateinit var cardQuickLog: CardView
-
     private lateinit var cardPersonnelReport: CardView
+    private lateinit var taskLocalRepository: TaskLocalRepository
+    private var responsibleTasksJob: Job? = null
 
-    private var isChecking = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +57,8 @@ class HomeActivity : AppCompatActivity() {
 
         // ====== اطمینان از خاموش بودن کارت در ابتدا ======
         setQuickLogCardEnabled(false)
+
+        taskLocalRepository = TaskLocalRepository(this)
     }
 
     override fun onResume() {
@@ -90,9 +99,13 @@ class HomeActivity : AppCompatActivity() {
             runOnUiThread {
                 showLoading(false)
                 disableCards(false)
-
-                // ====== بعد از بارگذاری کش، وضعیت را بررسی کن ======
                 checkUserHasResponsibleTasks()
+            }
+
+            // ← این خط رو اضافه کن (بیرون از runOnUiThread)
+            val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+            TaskSyncer.syncTasksFromServer(this, userId) { count ->
+                Log.d("HomeActivity", "Synced $count tasks to Room")
             }
         }
     }
@@ -104,8 +117,6 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun checkUserHasResponsibleTasks() {
-        if (isChecking) return
-
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
         val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
 
@@ -114,28 +125,17 @@ class HomeActivity : AppCompatActivity() {
             return
         }
 
-        isChecking = true
+        // اول غیرفعال کن تا وقتی دیتا اومد
+        setQuickLogCardEnabled(false)
 
-        val url = "${Config.BASE_URL}?action=getUserResponsibleTasks&userId=$currentUserId"
-
-        val request = JsonArrayRequest(
-            Request.Method.GET, url, null,
-            { response ->
-                isChecking = false
-                val hasTasks = response.length() > 0
-                runOnUiThread {
-                    setQuickLogCardEnabled(hasTasks)
-                }
-            },
-            { error ->
-                isChecking = false
-                runOnUiThread {
-                    setQuickLogCardEnabled(false)
-                }
+        responsibleTasksJob?.cancel()
+        responsibleTasksJob = lifecycleScope.launch {
+            taskLocalRepository.getResponsibleTasks(currentUserId).collectLatest { tasks ->
+                val hasTasks = tasks.isNotEmpty()
+                setQuickLogCardEnabled(hasTasks)
+                Log.d("HomeActivity", "Responsible tasks: ${tasks.size}, card enabled: $hasTasks")
             }
-        )
-
-        VolleySingleton.getInstance(this).add(request)
+        }
     }
 
     private fun setupClickListeners() {

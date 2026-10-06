@@ -14,6 +14,7 @@ import com.Mechanic.Workshop.ui.task.log.AddLogActivity
 import com.Mechanic.Workshop.ui.task.repository.TaskLogRepository
 import android.util.Log
 import android.view.View
+import androidx.appcompat.app.AlertDialog
 import com.Mechanic.Workshop.ui.task.complete.CompleteTaskActivity
 import com.Mechanic.Workshop.utils.SeenItem
 import com.Mechanic.Workshop.utils.SeenManager
@@ -25,6 +26,19 @@ import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
 import org.json.JSONArray
 import org.json.JSONObject
+import com.Mechanic.Workshop.ui.task.create.CreateTaskActivity
+import com.Mechanic.Workshop.ui.referral.ReferDialog
+import com.Mechanic.Workshop.ui.task.repository.TaskRepository
+import com.Mechanic.Workshop.utils.ActivityLogger
+import androidx.lifecycle.lifecycleScope
+import com.Mechanic.Workshop.data.local.ReportLocalRepository
+import com.Mechanic.Workshop.data.local.TaskLocalRepository
+import com.Mechanic.Workshop.data.sync.OutboxHelper
+import com.Mechanic.Workshop.data.sync.ReportSyncWorker
+import com.Mechanic.Workshop.data.sync.TaskSyncer
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class TaskDetailActivity : AppCompatActivity() {
 
@@ -35,6 +49,11 @@ class TaskDetailActivity : AppCompatActivity() {
     private lateinit var taskLogRepository: TaskLogRepository
     private lateinit var progressBar: View
     private lateinit var userRole: String
+    private lateinit var taskLocalRepository: TaskLocalRepository
+    private lateinit var reportLocalRepository: ReportLocalRepository
+    private lateinit var taskRepository: TaskRepository
+    private var taskJob: Job? = null
+    private var logsJob: Job? = null
 
     companion object {
         private const val STATUS_IN_PROGRESS = "2"
@@ -82,7 +101,6 @@ class TaskDetailActivity : AppCompatActivity() {
         onBackPressed()
         return true
     }
-
     private fun setupToolbar() {
         val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -92,14 +110,15 @@ class TaskDetailActivity : AppCompatActivity() {
         }
         toolbar.navigationIcon?.setTint(Color.WHITE)
     }
-
     private fun initViews() {
         recyclerView = findViewById(R.id.recyclerViewTaskDetail)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        taskLogRepository = TaskLogRepository(this)
+        taskLogRepository = TaskLogRepository(this)          // ← نگه‌دار برای delete/update
+        taskLocalRepository = TaskLocalRepository(this)      // ← جدید
+        reportLocalRepository = ReportLocalRepository(this)  // ← جدید
+        taskRepository = TaskRepository(this)
         progressBar = findViewById(R.id.progressBar)
     }
-
     private fun loadTaskData() {
         val tempTask = TaskModel(
             id = intent.getStringExtra("TASK_ID") ?: "",
@@ -125,33 +144,36 @@ class TaskDetailActivity : AppCompatActivity() {
         task = tempTask
         fetchFullTaskFromServer()
     }
-
     private fun loadTaskLogs(callback: (() -> Unit)? = null) {
-        taskLogRepository.getTaskLogs(
-            taskId = task.id,
-            onSuccess = { logs ->
-                runOnUiThread {
-                    logsList.clear()
-                    logsList.addAll(logs)
-                    setupAdapter()
-                    callback?.invoke()
-                }
-            },
-            onError = { message ->
-                runOnUiThread {
-                    Toast.makeText(this, "خطا در دریافت گزارش‌ها: $message", Toast.LENGTH_SHORT).show()
-                    setupAdapter()
-                }
+        logsJob?.cancel()
+        logsJob = lifecycleScope.launch {
+            reportLocalRepository.getReportsForTask(task.id).collectLatest { logs ->
+                logsList.clear()
+                logsList.addAll(logs)
+                setupAdapter()
+                callback?.invoke()
             }
-        )
+        }
     }
-
     private fun getCurrentUserId(): String {
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
         return sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
     }
-
     private fun fetchFullTaskFromServer() {
+        // ۱. از Room بخون (فوری)
+        taskJob?.cancel()
+        taskJob = lifecycleScope.launch {
+            taskLocalRepository.getTaskById(task.id).collectLatest { roomTask ->
+                if (roomTask != null) {
+                    val currentSeenBy = task.seenBy  // seenBy رو از سرور نگه‌دار
+                    task = roomTask.copy(seenBy = currentSeenBy)
+                    setupAdapter()
+                    loadTaskLogs()
+                }
+            }
+        }
+
+        // ۲. از سرور بخون (برا seenBy و hasUnseenReport)
         val url = "${Config.BASE_URL}?action=getTask&taskId=${task.id}"
         val request = JsonObjectRequest(
             Request.Method.GET, url, null,
@@ -188,13 +210,13 @@ class TaskDetailActivity : AppCompatActivity() {
             },
             { error ->
                 Log.e("TaskDetail", "Error fetching task: ${error.message}")
+                // اگه سرور در دسترس نبود، از Room خوندیم قبلاً
                 setupAdapter()
                 loadTaskLogs()
             }
         )
         VolleySingleton.getInstance(this).add(request)
     }
-
     private fun setupAdapter() {
         if (!::task.isInitialized) return
 
@@ -240,11 +262,35 @@ class TaskDetailActivity : AppCompatActivity() {
             currentUserId = currentUserId,
             userRole = userRole,
             buttonMode = buttonMode,
-            onButtonClick = onButtonClick
+            onButtonClick = onButtonClick,
+            onEditTaskClick = { editTask() },
+            onDeleteTaskClick = { deleteTask() },
+            onReferTaskClick = { referTask() },
+            onStatusChange = { newStatus -> changeTaskStatus(newStatus) }   // ← جدید
         )
         recyclerView.adapter = adapter
     }
+    private fun changeTaskStatus(newStatus: String) {
+        if (task.status == newStatus) {
+            Toast.makeText(this, "وضعیت فعلی همینه", Toast.LENGTH_SHORT).show()
+            return
+        }
 
+        lifecycleScope.launch {
+            try {
+                taskLocalRepository.updateTaskStatus(task.id, newStatus)
+                OutboxHelper.enqueueUpdateTaskStatus(this@TaskDetailActivity, task.id, newStatus)
+                ReportSyncWorker.enqueue(this@TaskDetailActivity)
+
+                task = task.copy(status = newStatus)
+                setupAdapter()
+
+                Toast.makeText(this@TaskDetailActivity, "وضعیت تغییر کرد", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@TaskDetailActivity, "خطا: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     private fun startAddLogActivity(log: TaskLogModel? = null) {
         val intent = Intent(this, AddLogActivity::class.java).apply {
             if (log != null) {
@@ -258,7 +304,6 @@ class TaskDetailActivity : AppCompatActivity() {
         }
         startActivity(intent)
     }
-
     private fun putTaskExtras(intent: Intent) {
         intent.apply {
             putExtra("TITLE", task.title)
@@ -278,26 +323,31 @@ class TaskDetailActivity : AppCompatActivity() {
             putExtra("URGENCY", task.urgency)
         }
     }
-
     private fun deleteLog(log: TaskLogModel) {
-        taskLogRepository.deleteTaskLog(
-            logId = log.id,
-            onSuccess = {
-                runOnUiThread {
-                    Toast.makeText(this, "گزارش حذف شد", Toast.LENGTH_SHORT).show()
-                    loadTaskLogs {
+        AlertDialog.Builder(this)
+            .setTitle("حذف گزارش")
+            .setMessage("آیا از حذف این گزارش مطمئن هستید؟")
+            .setPositiveButton("بله") { _, _ ->
+                lifecycleScope.launch {
+                    try {
+                        val wasSynced = reportLocalRepository.deleteReportLocally(log.id)
+
+                        if (wasSynced) {
+                            OutboxHelper.enqueueDeleteTaskLog(this@TaskDetailActivity, log.id)
+                            ReportSyncWorker.enqueue(this@TaskDetailActivity)
+                        }
+
+                        Toast.makeText(this@TaskDetailActivity, "گزارش حذف شد", Toast.LENGTH_SHORT).show()
                         updateTaskStatusFromLastLog()
+
+                    } catch (e: Exception) {
+                        Toast.makeText(this@TaskDetailActivity, "خطا: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
-            },
-            onError = { message ->
-                runOnUiThread {
-                    Toast.makeText(this, "خطا در حذف: $message", Toast.LENGTH_SHORT).show()
-                }
             }
-        )
+            .setNegativeButton("خیر", null)
+            .show()
     }
-
     private fun updateTaskStatusFromLastLog() {
         if (logsList.isEmpty()) {
             updateTaskStatusDirectly(STATUS_IN_PROGRESS)
@@ -319,7 +369,6 @@ class TaskDetailActivity : AppCompatActivity() {
             updateTaskStatusDirectly(newStatus)
         }
     }
-
     private fun completeTask() {
         val currentUserId = getCurrentUserId()
         val isResponsible = task.responsible == currentUserId
@@ -349,7 +398,6 @@ class TaskDetailActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun updateTaskStatusDirectly(newStatus: String, callback: ((Boolean) -> Unit)? = null) {
         val url = "${Config.BASE_URL}?action=updateTaskStatus"
         val jsonObject = JSONObject().apply {
@@ -371,11 +419,127 @@ class TaskDetailActivity : AppCompatActivity() {
         )
         VolleySingleton.getInstance(this).add(request)
     }
-
     private fun navigateToCartable() {
         val intent = Intent(this, CartableActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         startActivity(intent)
         finish()
+    }
+    private fun editTask() {
+        val intent = Intent(this, CreateTaskActivity::class.java)
+        intent.putExtra("IS_EDIT", true)
+        intent.putExtra("TASK_ID", task.id)
+        intent.putExtra("TITLE", task.title)
+        intent.putExtra("DESC", task.description)
+        intent.putExtra("UNIT", task.unit)
+        intent.putExtra("SUB_UNIT", task.sub_unit)
+        intent.putExtra("DECLARATION_METHOD", task.declaration_method)
+        intent.putExtra("REQUESTER", task.requester)
+        intent.putExtra("REQUEST_DATE", task.request_date)
+        intent.putExtra("INITIAL_REVIEW", task.initial_review)
+        intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
+        intent.putExtra("URGENCY", task.urgency)
+        intent.putExtra("OLD_TITLE", task.title)
+        intent.putExtra("OLD_UNIT", task.unit)
+        intent.putExtra("OLD_PRIORITY", task.priority)
+        startActivity(intent)
+    }
+    private fun deleteTask() {
+        AlertDialog.Builder(this)
+            .setTitle("حذف کار")
+            .setMessage("آیا از حذف این کار مطمئن هستید؟")
+            .setPositiveButton("بله") { _, _ ->
+                lifecycleScope.launch {
+                    try {
+                        taskLocalRepository.deleteTaskLocally(task.id)
+                        OutboxHelper.enqueueDeleteTask(this@TaskDetailActivity, task.id)
+                        ReportSyncWorker.enqueue(this@TaskDetailActivity)
+
+                        // ← لاگ
+                        val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+                        val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+                        val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+
+                        ActivityLogger.log(
+                            context = this@TaskDetailActivity,
+                            userId = userId,
+                            userName = userName,
+                            action = "delete",
+                            targetType = "TASK",
+                            targetId = task.id,
+                            description = "کار شماره ${task.id} با عنوان «${task.title}» حذف شد"
+                        )
+
+                        Toast.makeText(this@TaskDetailActivity, "کار حذف شد", Toast.LENGTH_SHORT).show()
+                        finish()
+                    } catch (e: Exception) {
+                        Toast.makeText(this@TaskDetailActivity, "خطا: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("خیر", null)
+            .show()
+    }
+    private fun referTask() {
+        val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+
+        val referDialog = ReferDialog(
+            context = this,
+            taskTitle = task.title,
+            currentAssignees = task.assignedTo,
+            currentResponsible = task.responsible
+        )
+
+        referDialog.setOnReferSubmitListener { assigneeIds, referralType, responsibleId ->
+            val oldAssignees = task.assignedTo
+            val oldResponsible = task.responsible
+
+            taskRepository.assignTask(
+                taskId = task.id,
+                assigneeIds = assigneeIds,
+                referralType = referralType,
+                responsibleId = responsibleId,
+                referredBy = currentUserId,
+                onSuccess = {
+                    runOnUiThread {
+                        val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+                        val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+
+                        val assigneeNames = assigneeIds.split(",").mapNotNull { UserCache.getName(it) }.joinToString("، ")
+                        val responsibleName = if (responsibleId != null) UserCache.getName(responsibleId) else "تعیین نشده"
+                        val oldAssigneeNames = oldAssignees.split(",").mapNotNull { UserCache.getName(it) }.joinToString("، ")
+                        val oldResponsibleName = UserCache.getName(oldResponsible)
+
+                        val description = "کار شماره ${task.id} با عنوان «${task.title}» توسط کاربر $userName ارجاع شد.\n" +
+                                "گروه قبلی: [$oldAssigneeNames] - گروه جدید: [$assigneeNames]\n" +
+                                "مسئول قبلی: [$oldResponsibleName] - مسئول جدید: [$responsibleName]"
+
+                        ActivityLogger.log(
+                            context = this,
+                            userId = userId,
+                            userName = userName,
+                            action = "REFER_TASK",
+                            targetType = "TASK",
+                            targetId = task.id,
+                            description = description
+                        )
+
+                        Toast.makeText(this, "ارجاع با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
+
+                        TaskSyncer.syncTasksFromServer(this@TaskDetailActivity)
+
+                        // دوباره از Room بخون
+                        fetchFullTaskFromServer()
+                    }
+                },
+                onError = { message ->
+                    runOnUiThread {
+                        Toast.makeText(this, "خطا: $message", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+        }
+        referDialog.show()
     }
 }

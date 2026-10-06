@@ -1,15 +1,21 @@
 package com.Mechanic.Workshop.utils.evaluation
 
 import android.content.Context
+import com.Mechanic.Workshop.data.local.AppDatabase
+import com.Mechanic.Workshop.data.local.entity.CoefficientEntity
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.utils.VolleySingleton
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * کش ضرایب ارزیابی
- * جایگزین CoefficientCache قدیمی
+ * کش ضرایب ارزیابی — آفلاین‌فرست
+ * اول از Room می‌خونه، اگه نبود از سرور
  */
 object EvaluationCache {
 
@@ -18,38 +24,55 @@ object EvaluationCache {
     private val pendingCallbacks = mutableListOf<() -> Unit>()
 
     /**
-     * دریافت ضرایب (با کش)
+     * دریافت ضرایب (اول Room، بعد سرور)
      */
     fun getCoefficients(context: Context, callback: (EvaluationModels.Coefficients?) -> Unit) {
+        // ۱. اگه توی حافظه داریم، فوری برگردون
         coefficients?.let {
             callback(it)
             return
         }
 
-        if (isLoading) {
-            pendingCallbacks.add {
-                callback(coefficients)  // ← ممکنه null باشه
-            }
-            return
-        }
+        // ۲. از Room بخون (async)
+        CoroutineScope(Dispatchers.IO).launch {
+            val db = AppDatabase.getInstance(context)
+            val entity = db.coefficientDao().get()
 
-        isLoading = true
-        loadFromServer(context) { coeffs ->
-            coefficients = coeffs
-            isLoading = false
-            callback(coeffs)  // ← ممکنه null باشه
-            pendingCallbacks.forEach { it() }
-            pendingCallbacks.clear()
+            if (entity != null) {
+                val coeffs = EvaluationModels.Coefficients(
+                    physicalDifficulty = entity.physicalDifficulty,
+                    technicalComplexity = entity.technicalComplexity,
+                    temperature = entity.temperature,
+                    pollution = entity.pollution
+                )
+                coefficients = coeffs
+
+                withContext(Dispatchers.Main) {
+                    callback(coeffs)
+                }
+                return@launch
+            }
+
+            // ۳. Room خالی → از سرور بگیر
+            withContext(Dispatchers.Main) {
+                loadFromServer(context, callback)
+            }
         }
     }
 
     /**
-     * بارگذاری از سرور
+     * بارگذاری از سرور و ذخیره توی Room
      */
     private fun loadFromServer(
         context: Context,
-        onComplete: (EvaluationModels.Coefficients?) -> Unit  // ← nullable
+        callback: (EvaluationModels.Coefficients?) -> Unit
     ) {
+        if (isLoading) {
+            pendingCallbacks.add { callback(coefficients) }
+            return
+        }
+
+        isLoading = true
         val url = "${Config.BASE_URL}?action=getCoefficients"
 
         val request = StringRequest(
@@ -58,34 +81,54 @@ object EvaluationCache {
                 try {
                     val json = JSONObject(response)
                     val coeffs = EvaluationModels.Coefficients(
-                        physicalDifficulty = json.getInt("physical_difficulty"),  // ← getInt (نه optInt)
+                        physicalDifficulty = json.getInt("physical_difficulty"),
                         technicalComplexity = json.getInt("technical_complexity"),
                         temperature = json.getInt("temperature"),
                         pollution = json.getInt("pollution")
                     )
-                    onComplete(coeffs)
+                    coefficients = coeffs
+                    isLoading = false
+
+                    // ذخیره توی Room
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val db = AppDatabase.getInstance(context)
+                        db.coefficientDao().insert(
+                            CoefficientEntity(
+                                key = "default",
+                                physicalDifficulty = coeffs.physicalDifficulty,
+                                technicalComplexity = coeffs.technicalComplexity,
+                                temperature = coeffs.temperature,
+                                pollution = coeffs.pollution,
+                                lastSyncedAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+
+                    callback(coeffs)
+                    pendingCallbacks.forEach { it() }
+                    pendingCallbacks.clear()
                 } catch (e: Exception) {
-                    onComplete(null)  // ← خطا → null برگردون
+                    isLoading = false
+                    callback(null)
+                    pendingCallbacks.forEach { it() }
+                    pendingCallbacks.clear()
                 }
             },
             { error ->
-                onComplete(null)  // ← خطا → null برگردون
+                isLoading = false
+                callback(null)
+                pendingCallbacks.forEach { it() }
+                pendingCallbacks.clear()
             }
         )
 
         VolleySingleton.getInstance(context).add(request)
     }
 
-    /**
-     * دریافت ضرایب به صورت همزمان (برای مواردی که کش پر شده)
-     */
     fun getCachedCoefficients(): EvaluationModels.Coefficients? {
         return coefficients
     }
 
-    /**
-     * پاک کردن کش
-     */
     fun clear() {
         coefficients = null
     }

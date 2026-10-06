@@ -21,6 +21,11 @@ import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.StringRequest
 import org.json.JSONArray
 import org.json.JSONObject
+import androidx.lifecycle.lifecycleScope
+import com.Mechanic.Workshop.data.local.ReportLocalRepository
+import com.Mechanic.Workshop.data.sync.OutboxHelper
+import com.Mechanic.Workshop.data.sync.ReportSyncWorker
+import kotlinx.coroutines.launch
 
 class EvaluationActivity : AppCompatActivity() {
 
@@ -465,35 +470,44 @@ class EvaluationActivity : AppCompatActivity() {
             else -> 0
         }
 
-        val url = "${Config.BASE_URL}?action=updateEvaluation"
-        val jsonObject = JSONObject().apply {
-            put("logId", logId)
-            put("notes", notes)
-            put("heatLevel", heat)
-            put("pollutionLevel", pollution)
-            put("workType", selectedWorkType)
-            put("physicalDifficulty", physicalDifficulty)
-            put("technicalComplexity", technicalComplexity)
-        }
+        lifecycleScope.launch {
+            try {
+                val reportLocalRepo = ReportLocalRepository(this@EvaluationActivity)
 
-        val request = JsonObjectRequest(
-            Request.Method.POST, url, jsonObject,
-            { response ->
-                Log.d("Evaluation", "Response: $response")
-                if (response.optString("status") == "success") {
-                    Toast.makeText(this, "✅ ارزیابی با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
-                    finish()
-                } else {
-                    val message = response.optString("message", "خطا در ثبت ارزیابی")
-                    Toast.makeText(this, "❌ $message", Toast.LENGTH_SHORT).show()
-                }
-            },
-            { error ->
-                Log.e("Evaluation", "Error: ${error.message}")
-                Toast.makeText(this, "❌ خطا در اتصال به شبکه: ${error.message}", Toast.LENGTH_SHORT).show()
+                // ۱. آپدیت توی Room
+                reportLocalRepo.updateReportEvaluation(
+                    reportId = logId,
+                    notes = notes,
+                    heatLevel = heat,
+                    pollutionLevel = pollution,
+                    workType = selectedWorkType,
+                    physicalDifficulty = physicalDifficulty,
+                    technicalComplexity = technicalComplexity
+                )
+
+                // ۲. Outbox
+                OutboxHelper.enqueueUpdateEvaluation(
+                    context = this@EvaluationActivity,
+                    logId = logId,
+                    notes = notes,
+                    heatLevel = heat,
+                    pollutionLevel = pollution,
+                    workType = selectedWorkType,
+                    physicalDifficulty = physicalDifficulty,
+                    technicalComplexity = technicalComplexity
+                )
+
+                // ۳. Worker
+                ReportSyncWorker.enqueue(this@EvaluationActivity)
+
+                // ۴. UI
+                Toast.makeText(this@EvaluationActivity, "✅ ارزیابی ثبت شد", Toast.LENGTH_SHORT).show()
+                finish()
+
+            } catch (e: Exception) {
+                Toast.makeText(this@EvaluationActivity, "❌ خطا: ${e.message}", Toast.LENGTH_SHORT).show()
             }
-        )
-        VolleySingleton.getInstance(this).add(request)
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -502,50 +516,31 @@ class EvaluationActivity : AppCompatActivity() {
     }
 
     private fun checkExistingEvaluation() {
-        val url = "${Config.BASE_URL}?action=getTaskLogs&taskId=$taskId"
+        lifecycleScope.launch {
+            try {
+                val reportLocalRepo = ReportLocalRepository(this@EvaluationActivity)
+                val report = reportLocalRepo.getReportById(logId)
 
-        val request = object : StringRequest(
-            Request.Method.GET, url,
-            { response ->
-                try {
-                    val jsonArray = JSONArray(response)
-                    for (i in 0 until jsonArray.length()) {
-                        val obj = jsonArray.getJSONObject(i)
-                        if (obj.getString("id") == logId) {
-                            existingPhysicalDifficulty = obj.optInt("physical_difficulty", 0)
-                            existingTechnicalComplexity = obj.optInt("technical_complexity", 0)
-                            existingHeatLevel = obj.optInt("heat_level", 30)
-                            existingPollutionLevel = obj.optInt("pollution_level", 0)
-                            existingWorkType = obj.optString("work_type", "1")
-                            existingNotes = obj.optString("notes", "")
+                if (report != null) {
+                    existingPhysicalDifficulty = report.physicalDifficulty
+                    existingTechnicalComplexity = report.technicalComplexity
+                    existingHeatLevel = report.heatLevel
+                    existingPollutionLevel = report.pollutionLevel
+                    existingWorkType = report.workType
+                    existingNotes = report.notes
 
-                            if (existingPhysicalDifficulty > 0 || existingTechnicalComplexity > 0) {
-                                isEditMode = true
-                                supportActionBar?.title = "✏️ ویرایش ارزیابی"
-                                btnSubmit.text = "✅ بروزرسانی ارزیابی"
-                            }
-
-                            applyExistingData()
-                            break
-                        }
+                    if (existingPhysicalDifficulty > 0 || existingTechnicalComplexity > 0) {
+                        isEditMode = true
+                        supportActionBar?.title = "✏️ ویرایش ارزیابی"
+                        btnSubmit.text = "✅ بروزرسانی ارزیابی"
                     }
-                } catch (e: Exception) {
-                    Log.e("Evaluation", "Error loading existing data", e)
+
+                    applyExistingData()
                 }
-            },
-            { error ->
-                Log.e("Evaluation", "Error: ${error.message}")
-            }
-        ) {
-            override fun getHeaders(): MutableMap<String, String> {
-                return hashMapOf(
-                    "Cache-Control" to "no-cache, no-store, must-revalidate",
-                    "Pragma" to "no-cache",
-                    "Expires" to "0"
-                )
+            } catch (e: Exception) {
+                Log.e("Evaluation", "Error: ${e.message}")
             }
         }
-        VolleySingleton.getInstance(this).add(request)
     }
 
     private fun applyExistingData() {

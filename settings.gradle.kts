@@ -1,8 +1,9 @@
 pluginManagement {
     repositories {
-
-        google {
-           content {
+        // Mirror Google (علی‌بابا) با همان Content Filter
+        maven {
+            url = uri("https://maven.aliyun.com/repository/google")
+            content {
                 includeGroupByRegex("com\\.android.*")
                 includeGroupByRegex("com\\.google.*")
                 includeGroupByRegex("androidx.*")
@@ -12,16 +13,23 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-
-        google()
-        maven { url = uri("https://www.jitpack.io") } // این خط را به این شکل بنویس
+        // Mirror Google (علی‌بابا) - جایگزین google()
+        maven {
+            url = uri("https://maven.aliyun.com/repository/google")
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        maven { url = uri("https://www.jitpack.io") }
         mavenCentral()
     }
 }
 
 rootProject.name = "MechanicApp"
 include(":app")
-

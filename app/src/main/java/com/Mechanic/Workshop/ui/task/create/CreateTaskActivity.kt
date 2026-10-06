@@ -17,6 +17,12 @@ import java.util.Calendar
 import ir.hamsaa.persiandatepicker.PersianDatePickerDialog
 import ir.hamsaa.persiandatepicker.api.PersianPickerDate
 import ir.hamsaa.persiandatepicker.api.PersianPickerListener
+import androidx.lifecycle.lifecycleScope
+import com.Mechanic.Workshop.data.local.TaskLocalRepository
+import com.Mechanic.Workshop.data.sync.OutboxHelper
+import com.Mechanic.Workshop.data.sync.ReportSyncWorker
+import TaskModel
+import kotlinx.coroutines.launch
 
 class CreateTaskActivity : AppCompatActivity() {
 
@@ -238,6 +244,10 @@ class CreateTaskActivity : AppCompatActivity() {
     }
 
     private fun sendCreateTaskRequest() {
+        if (isEdit) {
+            updateTaskOffline()
+            return   // ← مهم
+        }
         val url = "${Config.Endpoints.CREATE_TASK}?_=${System.currentTimeMillis()}"
 
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
@@ -369,6 +379,87 @@ class CreateTaskActivity : AppCompatActivity() {
         })
     }
 
+    private fun updateTaskOffline() {
+        val title = etTitle.text.toString().trim()
+        val description = etTaskDescription.text.toString().trim()
+        val requester = etRequester.text.toString().trim()
+        val requestDate = etRequestDate.text.toString().trim()
+        val initialReview = etInitialReview.text.toString().trim()
+        val systemRequestNumber = etSystemRequestNumber.text.toString().trim()
+
+        val unit = spinnerUnit.selectedItem?.toString() ?: ""
+        val subUnit = if (layoutSubUnit.visibility == View.VISIBLE) {
+            spinnerSubUnit.selectedItem?.toString() ?: ""
+        } else ""
+
+        val declarationMethod = if (spinnerDeclarationMethod.isEnabled) {
+            spinnerDeclarationMethod.selectedItem?.toString() ?: ""
+        } else ""
+
+        val urgency = when (rgUrgency.checkedRadioButtonId) {
+            R.id.rbUrgencyVeryHigh -> "خیلی زیاد"
+            R.id.rbUrgencyHigh -> "زیاد"
+            else -> "عادی"
+        }
+
+        btnSubmit.isEnabled = false
+        btnSubmit.text = "در حال ذخیره..."
+
+        lifecycleScope.launch {
+            try {
+                val taskLocalRepo = TaskLocalRepository(this@CreateTaskActivity)
+                val updatedTask = TaskModel(
+                    id = taskId ?: "",
+                    createDate = "",
+                    title = title,
+                    description = description,
+                    creator = "",
+                    status = "",
+                    assignedTo = "",
+                    responsible = "",
+                    pendingInvites = "",
+                    unit = unit,
+                    priority = "",
+                    sub_unit = subUnit,
+                    declaration_method = declarationMethod,
+                    requester = requester,
+                    request_date = requestDate,
+                    urgency = urgency,
+                    initial_review = initialReview,
+                    system_request_number = systemRequestNumber,
+                    referredBy = ""
+                )
+                taskLocalRepo.updateTaskFromEdit(updatedTask)
+
+                OutboxHelper.enqueueUpdateTask(this@CreateTaskActivity, updatedTask)
+                ReportSyncWorker.enqueue(this@CreateTaskActivity)
+
+                // لاگ (آفلاین؟ آره، فقط لاگ محلی)
+                val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+                val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+                val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
+
+                ActivityLogger.log(
+                    context = this@CreateTaskActivity,
+                    userId = userId,
+                    userName = userName,
+                    action = "EDIT_TASK",
+                    targetType = "TASK",
+                    targetId = taskId ?: "",
+                    description = "کار شماره ${taskId ?: ""} ویرایش شد"
+                )
+
+                Toast.makeText(this@CreateTaskActivity, "تغییرات ذخیره شد", Toast.LENGTH_SHORT).show()
+                setResult(RESULT_OK)
+                finish()
+
+            } catch (e: Exception) {
+                btnSubmit.isEnabled = true
+                btnSubmit.text = "بروزرسانی کار"
+                Toast.makeText(this@CreateTaskActivity, "خطا: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     private fun resetButton() {
         btnSubmit.isEnabled = true
         btnSubmit.text = if (isEdit) "بروزرسانی کار" else "ثبت کار"

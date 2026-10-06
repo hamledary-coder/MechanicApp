@@ -26,7 +26,11 @@ import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
+import com.Mechanic.Workshop.data.local.ReportLocalRepository
 import com.Mechanic.Workshop.data.model.Employee
+import com.Mechanic.Workshop.data.sync.OutboxHelper
+import com.Mechanic.Workshop.data.sync.ReportSyncWorker
 import com.Mechanic.Workshop.ui.task.detail.TaskDetailActivity
 import com.Mechanic.Workshop.ui.task.evaluation.EvaluationActivity
 import com.Mechanic.Workshop.utils.DateUtils
@@ -34,7 +38,9 @@ import com.Mechanic.Workshop.utils.VolleySingleton
 import com.Mechanic.Workshop.utils.UserCache
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
+import kotlinx.coroutines.launch
 import org.json.JSONObject
+
 
 
 @Suppress("DEPRECATION")
@@ -46,15 +52,11 @@ class AddLogActivity : AppCompatActivity() {
     private lateinit var etEndTime: EditText
     private lateinit var tvGroupValue: TextView
     private lateinit var btnEditGroup: Button
-    private lateinit var spinnerNewStatus: Spinner
     private lateinit var etNotes: EditText
     private lateinit var btnSubmit: Button
     private lateinit var btnCancel: Button
     private lateinit var tvDuration: TextView
-    private lateinit var tvConditionalLabel: TextView
-    private lateinit var etConditionalText: EditText
-
-    private var task: TaskModel? = null
+       private var task: TaskModel? = null
     private var currentGroupIds: String = ""
     private lateinit var taskLogRepository: TaskLogRepository
     private var isEditMode = false
@@ -64,11 +66,6 @@ class AddLogActivity : AppCompatActivity() {
     // متغیر برای جلوگیری از بارگذاری مکرر
     private var isUserCacheLoaded = false
 
-    companion object {
-        private const val STATUS_CONTINUE = "2"
-        private const val STATUS_STOPPED = "3"
-        private const val STATUS_SENT_TO_SUPERVISOR = "41"
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,7 +89,6 @@ class AddLogActivity : AppCompatActivity() {
         setupDatePicker()
         setupTimePickers()
         setupGroupSelection()
-        setupStatusSpinner()
         setupButtons()
 
         ensureUserCacheLoaded()
@@ -154,13 +150,10 @@ class AddLogActivity : AppCompatActivity() {
         etEndTime = findViewById(R.id.etEndTime)
         tvGroupValue = findViewById(R.id.tvGroupValue)
         btnEditGroup = findViewById(R.id.btnEditGroup)
-        spinnerNewStatus = findViewById(R.id.spinnerNewStatus)
         etNotes = findViewById(R.id.etNotes)
         btnSubmit = findViewById(R.id.btnSubmit)
         btnCancel = findViewById(R.id.btnCancel)
         tvDuration = findViewById(R.id.tvDuration)
-        tvConditionalLabel = findViewById(R.id.tvConditionalLabel)
-        etConditionalText = findViewById(R.id.etConditionalText)
 
         if (!isEditMode) {
             etStartTime.setText("09:00")
@@ -191,9 +184,6 @@ class AddLogActivity : AppCompatActivity() {
 
     private fun populateLogData(log: TaskLogModel, allLogs: List<TaskLogModel> = emptyList()) {
 
-        Log.d("AddLog1", "✅ editingLog set: $editingLog")  // ← این خط رو اضافه کن
-        Log.d("AddLog1", "✅ log.heatLevel: ${log.heatLevel}")  // ← این خط رو اضافه کن
-
         editingLog = log
         etActionDescription.setText(log.actionDescription)
         etDate.setText(log.date)
@@ -203,34 +193,6 @@ class AddLogActivity : AppCompatActivity() {
 
         currentGroupIds = log.assignedUsers
         updateGroupDisplay()
-
-        etConditionalText.setText(log.notes)
-
-        // ========== تشخیص آخرین گزارش ==========
-        val isLastLog = if (allLogs.isNotEmpty()) {
-            val sortedLogs = allLogs.sortedWith(compareByDescending<TaskLogModel> {
-                it.date + it.startTime
-            })
-            sortedLogs.firstOrNull()?.id == log.id
-        } else {
-            true
-        }
-
-        // ========== تنظیم اسپینر ==========
-        val statusCodes = listOf(STATUS_CONTINUE, STATUS_STOPPED, STATUS_SENT_TO_SUPERVISOR)
-        val statusIndex = statusCodes.indexOf(log.newStatus)
-        if (statusIndex >= 0) {
-            spinnerNewStatus.setSelection(statusIndex)
-            updateConditionalFields(statusIndex)
-        } else {
-            spinnerNewStatus.setSelection(2)
-            updateConditionalFields(2)
-        }
-
-        // ========== فقط این خط ساده ==========
-        // اگر آخرین گزارش نبود، اسپینر را غیرفعال کن
-        spinnerNewStatus.isEnabled = isLastLog
-        spinnerNewStatus.alpha = if (isLastLog) 1.0f else 0.5f
     }
 
     private fun showErrorAndFinish(message: String) {
@@ -406,50 +368,6 @@ class AddLogActivity : AppCompatActivity() {
             tvGroupValue.text = "تعیین نشده"
         }
     }
-
-    private fun updateConditionalFields(statusIndex: Int) {
-        when (statusIndex) {
-            0 -> { // ادامه دارد
-                tvConditionalLabel.text = "شرح اقدام بعدی"
-                tvConditionalLabel.visibility = View.VISIBLE
-                etConditionalText.visibility = View.VISIBLE
-                etConditionalText.hint = "برنامه بعدی برای این کار را وارد کنید..."
-            }
-            1 -> { // متوقف
-                tvConditionalLabel.text = "علت توقف"
-                tvConditionalLabel.visibility = View.VISIBLE
-                etConditionalText.visibility = View.VISIBLE
-                etConditionalText.hint = "دلیل توقف کار را وارد کنید..."
-            }
-            2 -> { // اتمام کار
-                tvConditionalLabel.visibility = View.GONE
-                etConditionalText.visibility = View.GONE
-                etConditionalText.setText("")
-            }
-        }
-    }
-
-    private fun setupStatusSpinner() {
-        val statusList = listOf(
-            STATUS_CONTINUE to "ادامه دارد",
-            STATUS_STOPPED to "متوقف",
-            STATUS_SENT_TO_SUPERVISOR to "اتمام کار"  // ← تغییر از STATUS_COMPLETED به STATUS_SENT_TO_SUPERVISOR
-        )
-
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, statusList.map { it.second })
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerNewStatus.adapter = adapter
-
-        spinnerNewStatus.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                updateConditionalFields(position)
-            }
-            override fun onNothingSelected(parent: AdapterView<*>) {}
-        }
-
-        updateConditionalFields(spinnerNewStatus.selectedItemPosition)
-    }
-
     private fun setupButtons() {
         btnSubmit.setOnClickListener {
             if (validateForm()) {
@@ -459,7 +377,6 @@ class AddLogActivity : AppCompatActivity() {
         }
         btnCancel.setOnClickListener { finish() }
     }
-
     private fun validateForm(): Boolean {
         if (etActionDescription.text.isNullOrBlank()) {
             Toast.makeText(this, "لطفاً شرح اقدام را وارد کنید", Toast.LENGTH_SHORT).show()
@@ -470,46 +387,13 @@ class AddLogActivity : AppCompatActivity() {
             return false
         }
 
-        if (etConditionalText.visibility == View.VISIBLE && etConditionalText.text.isNullOrBlank()) {
-            val message = when (spinnerNewStatus.selectedItemPosition) {
-                0 -> "لطفاً شرح اقدام بعدی را وارد کنید"
-                1 -> "لطفاً علت توقف را وارد کنید"
-                else -> ""
-            }
-            if (message.isNotEmpty()) {
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                return false
-            }
-        }
-
         return true
-    }
-
-    private fun getSelectedStatus(): String {
-        return when (spinnerNewStatus.selectedItemPosition) {
-            0 -> STATUS_CONTINUE
-            1 -> STATUS_STOPPED
-            2 -> STATUS_SENT_TO_SUPERVISOR  // ← تغییر
-            else -> STATUS_STOPPED
-        }
-    }
-
-    private fun getNewTaskStatus(logStatus: String): String {
-        return if (logStatus == STATUS_SENT_TO_SUPERVISOR) STATUS_SENT_TO_SUPERVISOR else STATUS_CONTINUE
     }
     private fun getCurrentUserInfo(): Pair<String, String> {
         val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
         val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
         val userName = sharedPref.getString(Config.PrefKeys.USERNAME, "کاربر") ?: "کاربر"
         return Pair(userId, userName)
-    }
-
-    private fun getFinalNotes(): String {
-        return if (etConditionalText.visibility == View.VISIBLE && etConditionalText.text.isNotEmpty()) {
-            etConditionalText.text.toString()
-        } else {
-            etNotes.text.toString()
-        }
     }
 
     private fun createTaskLogModel(status: String): TaskLogModel {
@@ -528,9 +412,9 @@ class AddLogActivity : AppCompatActivity() {
             endTime = etEndTime.text.toString(),
             actionDescription = etActionDescription.text.toString(),
             assignedUsers = currentGroupIds,
-            newStatus = status,
+            newStatus = "",
             attachments = sourceLog?.attachments ?: "",
-            notes = getFinalNotes(),
+            notes = etNotes.text.toString(),
             // ✅ مهم: اینا رو از لاگ اصلی نگه دار
             heatLevel = sourceLog?.heatLevel ?: 30,
             pollutionLevel = sourceLog?.pollutionLevel ?: 0,
@@ -544,65 +428,80 @@ class AddLogActivity : AppCompatActivity() {
         )
     }
 
-    private fun submitLog() {
-        val selectedStatus = getSelectedStatus()
-        val log = createTaskLogModel(selectedStatus)
+    private fun createTaskLogModelWithId(status: String, id: String): TaskLogModel {
+        val (userId, userName) = getCurrentUserInfo()
 
-        taskLogRepository.addTaskLog(
-            log = log,
-            onSuccess = { logIdFromServer ->
-                runOnUiThread {
-                    enableButton(btnSubmit)
-                    Toast.makeText(this, "گزارش با موفقیت ثبت شد", Toast.LENGTH_SHORT).show()
-                    setResult(RESULT_OK)
-
-                    val newTaskStatus = getNewTaskStatus(selectedStatus)
-                    updateTaskStatusDirectly(newTaskStatus)
-
-                    // 🔥 باز کردن صفحه ارزیابی
-                    val intent = Intent(this, EvaluationActivity::class.java).apply {
-                        putExtra("TASK_ID", task?.id ?: "")
-                        putExtra("LOG_ID", logIdFromServer)  // ← اینجا logIdFromServer رو استفاده کن
-                        putExtra("TASK_TITLE", task?.title ?: "")
-                        putExtra("TASK_DATE", etDate.text.toString())
-                        putExtra("TASK_START_TIME", etStartTime.text.toString())
-                        putExtra("TASK_END_TIME", etEndTime.text.toString())
-                        putExtra("TASK_DESCRIPTION", etActionDescription.text.toString())
-                        putExtra("ASSIGNED_USERS", currentGroupIds)
-                        putExtra("DURATION_MINUTES", calculateDuration())
-                    }
-                    startActivity(intent)
-                    finish()
-                }
-            },
-            onError = { message ->
-                runOnUiThread {
-                    enableButton(btnSubmit)
-                    Toast.makeText(this, "خطا در ثبت: $message", Toast.LENGTH_SHORT).show()
-                }
-            }
+        return TaskLogModel(
+            id = id,
+            taskId = task?.id ?: "",
+            userId = userId,
+            userName = userName,
+            date = etDate.text.toString(),
+            startTime = etStartTime.text.toString(),
+            endTime = etEndTime.text.toString(),
+            actionDescription = etActionDescription.text.toString(),
+            assignedUsers = currentGroupIds,
+            newStatus = status,
+            attachments = "",
+            notes = etNotes.text.toString(),   // ← قبلاً getFinalNotes() بود
+            heatLevel = 30,
+            pollutionLevel = 0,
+            workType = "1",
+            physicalDifficulty = 0,
+            technicalComplexity = 0,
+            seenBy = emptyList(),
+            duration = "",
+            comments = "[]",
+            taskUrgency = task?.urgency ?: "عادی"
         )
     }
+    private fun submitLog() {
+        val log = createTaskLogModel("")
 
+        lifecycleScope.launch {
+            try {
+                val reportLocalRepo = ReportLocalRepository(this@AddLogActivity)
+                val newId = reportLocalRepo.generateNextReportId(task?.id ?: "")
+                val logWithId = log.copy(id = newId)
+
+                reportLocalRepo.saveReportLocally(logWithId)
+                OutboxHelper.enqueueAddTaskLog(this@AddLogActivity, logWithId)
+                ReportSyncWorker.enqueue(this@AddLogActivity)
+
+                enableButton(btnSubmit)
+                Toast.makeText(this@AddLogActivity, "گزارش ثبت شد", Toast.LENGTH_SHORT).show()
+                setResult(RESULT_OK)
+
+                // رفتن به EvaluationActivity
+                val intent = Intent(this@AddLogActivity, EvaluationActivity::class.java).apply {
+                    putExtra("TASK_ID", task?.id ?: "")
+                    putExtra("LOG_ID", newId)
+                    putExtra("TASK_TITLE", task?.title ?: "")
+                    putExtra("TASK_DATE", etDate.text.toString())
+                    putExtra("TASK_START_TIME", etStartTime.text.toString())
+                    putExtra("TASK_END_TIME", etEndTime.text.toString())
+                    putExtra("TASK_DESCRIPTION", etActionDescription.text.toString())
+                    putExtra("ASSIGNED_USERS", currentGroupIds)
+                    putExtra("DURATION_MINUTES", calculateDuration())
+                }
+                startActivity(intent)
+                finish()
+
+            } catch (e: Exception) {
+                enableButton(btnSubmit)
+                Toast.makeText(this@AddLogActivity, "خطا: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     private fun updateLog() {
-
-        Log.d("AddLog1", "========== UPDATE LOG ==========")
-        Log.d("AddLog1", "isEditMode: $isEditMode")
-        Log.d("AddLog1", "editingLog: $editingLog")  // ← این خط رو اضافه کن
-
-        val selectedStatus = getSelectedStatus()
-        val newTaskStatus = getNewTaskStatus(selectedStatus)
-
-        updateTaskStatusDirectly(newTaskStatus)
-
-        val log = createTaskLogModel(selectedStatus)
+        val log = createTaskLogModel("")
 
         taskLogRepository.updateTaskLog(
             log = log,
             onSuccess = {
                 runOnUiThread {
                     enableButton(btnSubmit)
-                    Toast.makeText(this, "گزارش با موفقیت ویرایش شد", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "گزارش ویرایش شد", Toast.LENGTH_SHORT).show()
                     setResult(RESULT_OK)
                     finish()
                 }
@@ -610,51 +509,24 @@ class AddLogActivity : AppCompatActivity() {
             onError = { message ->
                 runOnUiThread {
                     enableButton(btnSubmit)
-                    Toast.makeText(this, "خطا در ویرایش: $message", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "خطا: $message", Toast.LENGTH_SHORT).show()
                 }
             }
         )
     }
 
-    private fun updateTaskStatusDirectly(newStatus: String) {
-        Log.d("AddLog", "updateTaskStatusDirectly called with: $newStatus")
-
-        val url = "${Config.BASE_URL}?action=updateTaskStatus"
-        val jsonObject = JSONObject().apply {
-            put("taskId", task?.id ?: "")
-            put("status", newStatus)
-        }
-
-        Log.d("AddLog", "Sending JSON: ${jsonObject.toString()}")
-
-        val request = JsonObjectRequest(
-            Request.Method.POST, url, jsonObject,
-            { response ->
-                Log.d("AddLog", "Server response: ${response.toString()}")
-            },
-            { error ->
-                Log.e("AddLog", "Error: ${error.message}")
-            }
-        )
-        VolleySingleton.getInstance(this).add(request)
-    }
-
-
     override fun onSupportNavigateUp(): Boolean {
         onBackPressed()
         return true
     }
-
     private fun disableButton(button: Button) {
         button.isEnabled = false
         button.alpha = 0.5f
     }
-
     private fun enableButton(button: Button) {
         button.isEnabled = true
         button.alpha = 1.0f
     }
-
     private fun setupExpandableCards() {
         // تیم اجرایی
         findViewById<LinearLayout>(R.id.headerTeam).setOnClickListener {

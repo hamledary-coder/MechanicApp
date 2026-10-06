@@ -1,11 +1,9 @@
 package com.Mechanic.Workshop.ui.reports
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.pdf.PdfDocument
 import android.os.Bundle
-import android.os.Environment
-import android.util.Log
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -18,23 +16,19 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.model.ReportGroup
-import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.ui.task.detail.TaskDetailActivity
 import com.Mechanic.Workshop.utils.DateUtils  // ← تغییر از ShamsiDateConverter به DateUtils
 import com.Mechanic.Workshop.utils.UserCache
-import com.Mechanic.Workshop.utils.VolleySingleton
-import com.android.volley.Request
-import com.android.volley.toolbox.StringRequest
 import com.google.android.material.tabs.TabLayout
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
 import java.util.Calendar
-import android.net.Uri
 import androidx.appcompat.app.AlertDialog
 import android.widget.Button
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import com.Mechanic.Workshop.data.local.BossReportsLocalRepository
 
 class ReportsActivity : AppCompatActivity() {
 
@@ -161,6 +155,7 @@ class ReportsActivity : AppCompatActivity() {
     }
 
     // ✅ فقط یک تابع updateDayRangeDisplay وجود داره
+    @SuppressLint("SetTextI18n")
     private fun updateDayRangeDisplay() {
         val dayName = DateUtils.getDayName(currentDay)  // ← تغییر
         val shamsiDate = DateUtils.gregorianToShamsi(currentDay)  // ← تغییر
@@ -291,72 +286,24 @@ class ReportsActivity : AppCompatActivity() {
 
     private fun loadReports() {
         val (startDate, endDate) = getDateRange()
-        Log.d("ReportsActivity", "Start Date: $startDate, End Date: $endDate")
-
-        val url = "${Config.BASE_URL}?action=getReportsForBoss&userId=$currentUserId&startDate=$startDate&endDate=$endDate&_=${System.currentTimeMillis()}"
 
         showLoading(true)
         hideEmptyState()
 
-        val request = StringRequest(
-            Request.Method.GET, url,
-            { response ->
-                try {
-                    val jsonArray = JSONArray(response)
-                    val groups = mutableListOf<ReportGroup>()
+        lifecycleScope.launch {
+            val repo = BossReportsLocalRepository(this@ReportsActivity)
+            repo.getGroupedReports(startDate, endDate).collectLatest { groups ->
+                showLoading(false)
+                swipeRefreshLayout.isRefreshing = false
+                reportGroups.clear()
+                reportGroups.addAll(groups)
+                setupAdapter()
 
-                    for (i in 0 until jsonArray.length()) {
-                        val obj = jsonArray.getJSONObject(i)
-                        val logsArray = obj.getJSONArray("logs")
-                        val logs = mutableListOf<TaskLogModel>()
-
-                        for (j in 0 until logsArray.length()) {
-                            val logObj = logsArray.getJSONObject(j)
-                            logs.add(parseLog(logObj))
-                        }
-
-                        groups.add(
-                            ReportGroup(
-                                taskId = obj.getString("task_id"),
-                                taskTitle = obj.optString("task_title", ""),
-                                taskDescription = obj.optString("task_description", ""),  // ← اضافه شد
-                                taskUnit = obj.optString("task_unit", ""),
-                                taskUrgency = obj.optString("task_urgency", ""),
-                                taskStatus = obj.optString("task_status", ""),
-                                taskResponsible = obj.optString("task_responsible", ""),
-                                taskAssignedTo = obj.optString("task_assigned_to", ""),
-                                logs = logs
-                            )
-                        )
-                    }
-
-                    runOnUiThread {
-                        showLoading(false)
-                        swipeRefreshLayout.isRefreshing = false
-                        reportGroups.clear()
-                        reportGroups.addAll(groups)
-                        setupAdapter()
-                        if (reportGroups.isEmpty()) {
-                            showEmptyState()
-                        }
-                    }
-                } catch (e: Exception) {
-                    runOnUiThread {
-                        showLoading(false)
-                        swipeRefreshLayout.isRefreshing = false
-                        Toast.makeText(this, "خطا در پردازش داده: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            },
-            { error ->
-                runOnUiThread {
-                    showLoading(false)
-                    swipeRefreshLayout.isRefreshing = false
-                    Toast.makeText(this, "خطا در اتصال به شبکه: ${error.message}", Toast.LENGTH_SHORT).show()
+                if (reportGroups.isEmpty()) {
+                    showEmptyState()
                 }
             }
-        )
-        VolleySingleton.getInstance(this).add(request)
+        }
     }
 
     private fun setupAdapter() {
@@ -397,39 +344,6 @@ class ReportsActivity : AppCompatActivity() {
         }
         recyclerView.adapter = currentAdapter
         currentAdapter?.notifyDataSetChanged()
-    }
-
-    private fun parseLog(obj: JSONObject): TaskLogModel {
-        val seenBy = mutableListOf<String>()
-        val seenByStr = obj.optString("seen_by", "[]")
-        if (seenByStr.isNotEmpty() && seenByStr != "[]") {
-            try {
-                val seenByArray = JSONArray(seenByStr)
-                for (j in 0 until seenByArray.length()) {
-                    seenBy.add(seenByArray.getString(j))
-                }
-            } catch (e: Exception) { /* ignore */ }
-        }
-        return TaskLogModel(
-            id = obj.getString("id"),
-            taskId = obj.getString("task_id"),
-            userId = obj.getString("user_id"),
-            userName = obj.optString("user_name", ""),
-            date = obj.optString("date", ""),
-            startTime = obj.optString("start_time", ""),
-            endTime = obj.optString("end_time", ""),
-            actionDescription = obj.optString("action_description", ""),
-            assignedUsers = obj.optString("assigned_users", ""),
-            newStatus = obj.optString("new_status", ""),
-            attachments = "",
-            notes = obj.optString("notes", ""),
-            duration = "",
-            comments = obj.optString("comments", "[]"),
-            heatLevel = obj.optInt("heat_level", 30),
-            pollutionLevel = obj.optInt("pollution_level", 0),
-            workType = obj.optString("work_type", "fixed_equipment"),
-            seenBy = seenBy
-        )
     }
 
     private fun showLoading(show: Boolean) {
