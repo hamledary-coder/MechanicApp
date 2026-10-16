@@ -53,6 +53,8 @@ class CreateTaskActivity : AppCompatActivity() {
     private lateinit var layoutSystemNumber: LinearLayout
     private lateinit var rgUrgency: RadioGroup
     private lateinit var layoutDeclarationMethod: LinearLayout
+    private lateinit var sliderPriority: com.google.android.material.slider.Slider
+    private lateinit var tvPriorityValue: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,6 +92,12 @@ class CreateTaskActivity : AppCompatActivity() {
         layoutSystemNumber = findViewById(R.id.layoutSystemNumber)
         rgUrgency = findViewById(R.id.rgUrgency)
         layoutDeclarationMethod = findViewById(R.id.layoutDeclarationMethod)
+        sliderPriority = findViewById(R.id.sliderPriority)
+        tvPriorityValue = findViewById(R.id.tvPriorityValue)
+
+        sliderPriority.addOnChangeListener { _, value, _ ->
+            tvPriorityValue.text = value.toInt().toString()
+        }
     }
 
     private fun setupSpinners() {
@@ -231,6 +239,11 @@ class CreateTaskActivity : AppCompatActivity() {
                 "زیاد" -> rgUrgency.check(R.id.rbUrgencyHigh)
                 else -> rgUrgency.check(R.id.rbUrgencyNormal)
             }
+
+            //=========الویت===========
+            val priority = intent.getIntExtra("PRIORITY", 50)
+            sliderPriority.value = priority.toFloat()
+            tvPriorityValue.text = priority.toString()
         }
     }
 
@@ -285,6 +298,8 @@ class CreateTaskActivity : AppCompatActivity() {
             else -> "عادی"
         }
 
+        val priority = sliderPriority.value.toInt()
+
         val json = JSONObject().apply {
             if (isEdit) {
                 put("action", "update")
@@ -295,6 +310,7 @@ class CreateTaskActivity : AppCompatActivity() {
             }
             put("title", title)
             put("urgency", urgency)
+            put("priority", priority)
 
             if (description.isNotEmpty()) put("description", description)
             if (unit.isNotEmpty()) put("unit", unit)
@@ -401,6 +417,7 @@ class CreateTaskActivity : AppCompatActivity() {
             R.id.rbUrgencyHigh -> "زیاد"
             else -> "عادی"
         }
+        val priority = sliderPriority.value.toInt()
 
         btnSubmit.isEnabled = false
         btnSubmit.text = "در حال ذخیره..."
@@ -419,7 +436,7 @@ class CreateTaskActivity : AppCompatActivity() {
                     responsible = "",
                     pendingInvites = "",
                     unit = unit,
-                    priority = "",
+                    priority = priority,
                     sub_unit = subUnit,
                     declaration_method = declarationMethod,
                     requester = requester,
@@ -460,6 +477,7 @@ class CreateTaskActivity : AppCompatActivity() {
             }
         }
     }
+
     private fun resetButton() {
         btnSubmit.isEnabled = true
         btnSubmit.text = if (isEdit) "بروزرسانی کار" else "ثبت کار"

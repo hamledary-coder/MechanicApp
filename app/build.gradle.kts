@@ -56,7 +56,8 @@ dependencies {
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("com.github.aliab:Persian-Date-Picker-Dialog:1.8.0")
-
+    // در settings.gradle.kts نیازی به JitPack نیست
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -65,8 +66,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-
-
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -287,7 +287,7 @@ object EvaluationCalculator {
 
                 // ساعت خام (همه نفرات یکسان)
                 val rawPhysical = if (userId in assignedUsers) durationMinutes.toDouble() else 0.0
-                val rawResponsibility = if (userId == responsibleId) durationMinutes.toDouble() else 0.0
+                val rawResponsibility = if (userId == responsibleId && log.workType != "3") durationMinutes.toDouble() else 0.0
                 val rawTechnical = if (userId in assignedUsers && isTechnical) durationMinutes.toDouble() else 0.0
                 val rawInspection = if (userId in assignedUsers && log.workType == "3") durationMinutes.toDouble() else 0.0
 

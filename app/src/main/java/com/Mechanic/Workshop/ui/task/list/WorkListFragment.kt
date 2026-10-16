@@ -234,7 +234,7 @@ class WorkListFragment : Fragment() {
     }
 
     private fun sortTasksByPriority() {
-        taskList.sortByDescending { it.priority.toIntOrNull() ?: 0 }
+        taskList.sortByDescending { it.priority.toInt() ?: 0 }
         adapter?.notifyDataSetChanged()
     }
 

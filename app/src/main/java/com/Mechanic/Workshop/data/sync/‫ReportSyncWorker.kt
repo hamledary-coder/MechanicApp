@@ -140,6 +140,7 @@ class ReportSyncWorker(
                         "updateTaskStatus" -> "${Config.BASE_URL}?action=updateTaskStatus"
                         "updateEvaluation" -> "${Config.BASE_URL}?action=updateEvaluation"
                         "updateTask" -> "${Config.BASE_URL}?action=update"
+                        "updateTaskPriority" -> "${Config.BASE_URL}?action=updateTaskPriority"
                         else -> return false
                     }
                     postUrl to item.payload.toRequestBody("application/json; charset=utf-8".toMediaType())

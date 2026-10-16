@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
 
-    @Query("SELECT * FROM tasks WHERE isDeleted = 0 ORDER BY id DESC")
+    @Query("SELECT * FROM tasks WHERE isDeleted = 0 ORDER BY priority DESC, id DESC")
     fun getAll(): Flow<List<TaskEntity>>
 
     @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
@@ -23,11 +23,11 @@ interface TaskDao {
     // ========== کوئری‌های فیلتر برای کارتابل ==========
 
     /** تب «اقدام نشده» → status = "1" */
-    @Query("SELECT * FROM tasks WHERE status = '1' AND isDeleted = 0 ORDER BY id DESC")
+    @Query("SELECT * FROM tasks WHERE status = '1' AND isDeleted = 0 ORDER BY priority DESC, id DESC")
     fun getUnassigned(): Flow<List<TaskEntity>>
 
     /** تب «در حال انجام» → status شروع می‌شه با "2" */
-    @Query("SELECT * FROM tasks WHERE status LIKE '2%' AND isDeleted = 0 ORDER BY id DESC")
+    @Query("SELECT * FROM tasks WHERE status LIKE '2%' AND isDeleted = 0 ORDER BY priority DESC, id DESC")
     fun getInProgress(): Flow<List<TaskEntity>>
 
     /** تب «کارتابل من» برای کارمند → assignedTo شامل user و responsible = user */
@@ -37,7 +37,10 @@ interface TaskDao {
           AND status != '5'
           AND responsible = :userId
           AND (',' || assignedTo || ',') LIKE '%,' || :userId || ',%'
-        ORDER BY id DESC
+        ORDER BY
+            CASE WHEN responsible = :userId THEN 0 ELSE 1 END,
+            priority DESC,
+            id DESC
     """)
     fun getMyCartableForEmployee(userId: String): Flow<List<TaskEntity>>
 
@@ -52,12 +55,12 @@ interface TaskDao {
               OR status = '41'
               OR hasUnseenReport = 1
           )
-        ORDER BY id DESC
+        ORDER BY priority DESC, id DESC
     """)
     fun getMyCartableForSupervisor(userId: String): Flow<List<TaskEntity>>
 
     /** کارهایی که کاربر مسئولشونه و در حال انجامه (برای HomeActivity) */
-    @Query("SELECT * FROM tasks WHERE responsible = :userId AND status = '2' AND isDeleted = 0 ORDER BY id DESC")
+    @Query("SELECT * FROM tasks WHERE responsible = :userId AND status = '2' AND isDeleted = 0 ORDER BY priority DESC, id DESC")
     fun getResponsibleTasks(userId: String): Flow<List<TaskEntity>>
 
     // ========== نوشتن ==========
@@ -83,9 +86,11 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE id IN (:ids)")
     suspend fun getByIds(ids: List<String>): List<TaskEntity>
+
     @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
     suspend fun getByIdOnce(id: String): TaskEntity?
 
+    /** ← بایگانی: بدون تغییر (id DESC) */
     @Query("SELECT * FROM tasks WHERE status = '5' AND isDeleted = 0 ORDER BY id DESC")
     fun getArchived(): Flow<List<TaskEntity>>
 }

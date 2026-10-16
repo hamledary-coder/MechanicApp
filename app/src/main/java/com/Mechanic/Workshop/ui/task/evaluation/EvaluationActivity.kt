@@ -12,20 +12,18 @@ import androidx.recyclerview.widget.RecyclerView
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.utils.UserCache
-import com.Mechanic.Workshop.utils.VolleySingleton
 import com.Mechanic.Workshop.utils.evaluation.EvaluationCache
 import com.Mechanic.Workshop.utils.evaluation.EvaluationCalculator
 import com.Mechanic.Workshop.utils.evaluation.EvaluationModels
-import com.android.volley.Request
-import com.android.volley.toolbox.JsonObjectRequest
-import com.android.volley.toolbox.StringRequest
-import org.json.JSONArray
-import org.json.JSONObject
 import androidx.lifecycle.lifecycleScope
 import com.Mechanic.Workshop.data.local.ReportLocalRepository
 import com.Mechanic.Workshop.data.sync.OutboxHelper
 import com.Mechanic.Workshop.data.sync.ReportSyncWorker
 import kotlinx.coroutines.launch
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
 
 class EvaluationActivity : AppCompatActivity() {
 
@@ -117,6 +115,7 @@ class EvaluationActivity : AppCompatActivity() {
         getIntentData()
         initViews()  // ← اینجا rvTeamMembers مقداردهی میشه
         loadTeamMembers()
+
 
         // ===== بعد ضرایب رو بگیر =====
         EvaluationCache.getCoefficients(this) { coeffs ->

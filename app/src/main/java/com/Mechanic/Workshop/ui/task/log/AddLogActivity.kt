@@ -131,7 +131,7 @@ class AddLogActivity : AppCompatActivity() {
             responsible = intent.getStringExtra("RESPONSIBLE") ?: "",
             pendingInvites = "",
             unit = intent.getStringExtra("UNIT") ?: "",
-            priority = intent.getStringExtra("PRIORITY") ?: "",
+            priority = intent.getIntExtra("PRIORITY", 50),
             sub_unit = intent.getStringExtra("SUB_UNIT") ?: "",
             declaration_method = intent.getStringExtra("DECLARATION_METHOD") ?: "",
             requester = intent.getStringExtra("REQUESTER") ?: "",

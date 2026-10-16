@@ -19,7 +19,7 @@ data class TaskEntity(
 
     val pendingInvites: String = "",
     val unit: String = "",
-    val priority: String = "",
+    val priority: Int = 50,
 
     val subUnit: String = "",
     val declarationMethod: String = "",

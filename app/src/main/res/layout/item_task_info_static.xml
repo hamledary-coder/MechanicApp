@@ -137,6 +137,34 @@
                     android:layout_weight="1"
                     android:orientation="vertical">
 
+                    <!-- ← layoutPriority -->
+                    <LinearLayout
+                        android:id="@+id/layoutPriority"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🎯 اولویت: "
+                            android:textSize="12sp"
+                            android:textColor="#999" />
+
+                        <TextView
+                            android:id="@+id/tvTaskPriority"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="50"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="#333" />
+
+                    </LinearLayout>   <!-- ← اینجا بسته می‌شه -->
+
+
                     <!-- ====== مسئول (تنها) ====== -->
                     <LinearLayout
                         android:id="@+id/layoutResponsible"
@@ -454,10 +482,10 @@
                 <LinearLayout
                     android:id="@+id/taskActionButtons"
                     android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
+                    android:layout_gravity="bottom"
                     android:orientation="vertical"
-                    android:gravity="bottom"
                     android:visibility="gone">
 
                     <ImageButton

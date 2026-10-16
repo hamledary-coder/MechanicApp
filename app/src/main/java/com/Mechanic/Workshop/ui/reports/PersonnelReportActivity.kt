@@ -15,10 +15,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.model.PersonnelReport
+import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.utils.TimeUtils
 import com.Mechanic.Workshop.utils.evaluation.EvaluationCalculator
 import com.Mechanic.Workshop.utils.evaluation.EvaluationCache
 import com.Mechanic.Workshop.utils.evaluation.EvaluationRepository
+import com.github.mikephil.charting.charts.BarChart
+import com.Mechanic.Workshop.utils.chart.ChartHelper
+import com.github.mikephil.charting.formatter.ValueFormatter
 
 class PersonnelReportActivity : AppCompatActivity() {
 
@@ -139,6 +143,7 @@ class PersonnelReportActivity : AppCompatActivity() {
         )
     }
 
+    // ========== فقط این نسخه رو نگه دار ==========
     private fun addSectionWithToggle(
         sectionKey: String,
         title: String,
@@ -146,17 +151,31 @@ class PersonnelReportActivity : AppCompatActivity() {
         rawGetter: (PersonnelReport) -> String,
         finalGetter: (PersonnelReport) -> String
     ) {
-        // فیلتر و مرتب‌سازی با ساعت اعشاری (از زیاد به کم)
         val filteredReports = reports
             .filter {
                 val raw = rawGetter(it)
                 raw != "00:00" && raw != "0:00" && raw != "0"
             }
-            .sortedByDescending { TimeUtils.timeToDecimalHour(finalGetter(it)) } // ← تغییر اینجا
+            .sortedByDescending { TimeUtils.timeToDecimalHour(finalGetter(it)) }
 
         if (filteredReports.isEmpty()) return
 
-        val isChartMode = viewStates[sectionKey] ?: false
+        // ✅ گرفتن ID کاربر لاگین‌شده
+        val sharedPref = getSharedPreferences(Config.PrefKeys.USER_PREFS, MODE_PRIVATE)
+        val currentUserId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
+
+        // ✅ شماره‌گذاری بر اساس جایگاه واقعی (index)
+        val maskedReports = filteredReports.mapIndexed { index, report ->
+            if (report.userId == currentUserId) {
+                report  // خودم → اسم واقعی
+            } else {
+                // جایگاه واقعی = index + 1
+                val rank = index + 1
+                report.copy(userName = "نفر ${ordinalPersian(rank)}")
+            }
+        }
+
+        val isChartMode = viewStates[sectionKey] ?: true
 
         val sectionView = LayoutInflater.from(this)
             .inflate(R.layout.item_section_report, containerReports, false)
@@ -164,154 +183,111 @@ class PersonnelReportActivity : AppCompatActivity() {
         val tvTitle = sectionView.findViewById<TextView>(R.id.tvSectionTitle)
         val btnToggle = sectionView.findViewById<Button>(R.id.btnToggleView)
         val recyclerView = sectionView.findViewById<RecyclerView>(R.id.rvSectionItems)
-        val chartContainer = sectionView.findViewById<LinearLayout>(R.id.chartContainer)
+        val barChart = sectionView.findViewById<BarChart>(R.id.barChart)
         val tableHeader = sectionView.findViewById<LinearLayout>(R.id.tableHeader)
 
-        tvTitle.text = "$title (${filteredReports.size} نفر)"
+        tvTitle.text = "$title (${maskedReports.size} نفر)"
+
+        val sectionColor = when {
+            sectionKey.contains("مسئولیت") -> ContextCompat.getColor(this, R.color.primary_blue)
+            sectionKey.contains("فیزیکی") -> ContextCompat.getColor(this, R.color.primary_green_dark)
+            sectionKey.contains("فنی") -> ContextCompat.getColor(this, R.color.priority_high)
+            sectionKey.contains("بررسی") -> ContextCompat.getColor(this, R.color.priority_medium)
+            else -> ContextCompat.getColor(this, R.color.primary_blue)
+        }
 
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = SectionAdapter(filteredReports, rawGetter, finalGetter)
+        recyclerView.adapter = SectionAdapter(maskedReports, rawGetter, finalGetter)
         recyclerView.isNestedScrollingEnabled = false
         recyclerView.setHasFixedSize(false)
 
-        if (isChartMode) {
-            chartContainer.visibility = View.VISIBLE
-            tableHeader.visibility = View.GONE
-            recyclerView.visibility = View.GONE
-            btnToggle.text = "📋 جدول"
-            showSimpleChart(chartContainer, filteredReports, finalGetter, title)
-        } else {
-            chartContainer.visibility = View.GONE
-            tableHeader.visibility = View.VISIBLE
-            recyclerView.visibility = View.VISIBLE
-            btnToggle.text = "📊 نمودار"
-        }
+        setupChart(barChart, maskedReports, rawGetter, finalGetter, sectionColor)
+
+        applyMode(isChartMode, barChart, tableHeader, recyclerView, btnToggle)
 
         btnToggle.setOnClickListener {
-            val newMode = !viewStates.getOrDefault(sectionKey, false)
+            val newMode = !viewStates.getOrDefault(sectionKey, true)
             viewStates[sectionKey] = newMode
-
-            if (newMode) {
-                chartContainer.visibility = View.VISIBLE
-                tableHeader.visibility = View.GONE
-                recyclerView.visibility = View.GONE
-                btnToggle.text = "📋 جدول"
-                // با post صدا بزن تا View اندازه‌گیری بشه
-                chartContainer.post {
-                    showSimpleChart(chartContainer, filteredReports, finalGetter, title)
-                }
-            } else {
-                chartContainer.visibility = View.GONE
-                tableHeader.visibility = View.VISIBLE
-                recyclerView.visibility = View.VISIBLE
-                btnToggle.text = "📊 نمودار"
-            }
+            applyMode(newMode, barChart, tableHeader, recyclerView, btnToggle)
         }
 
         containerReports.addView(sectionView)
     }
 
-    private fun showSimpleChart(
-        chartContainer: LinearLayout,
-        reports: List<PersonnelReport>,
-        finalGetter: (PersonnelReport) -> String,
-        title: String
+    private fun applyMode(
+        isChartMode: Boolean,
+        barChart: BarChart,
+        tableHeader: LinearLayout,
+        recyclerView: RecyclerView,
+        btnToggle: Button
     ) {
-        // پاک کردن قبلی‌ها
-        chartContainer.removeAllViews()
-
-        // اگر ارتفاع صفر هست، منتظر بمان
-        if (chartContainer.height == 0) {
-            chartContainer.post {
-                drawChart(chartContainer, reports, finalGetter, title)
-            }
+        if (isChartMode) {
+            barChart.visibility = View.VISIBLE
+            tableHeader.visibility = View.GONE
+            recyclerView.visibility = View.GONE
+            btnToggle.text = "📋 جدول"
         } else {
-            drawChart(chartContainer, reports, finalGetter, title)
+            barChart.visibility = View.GONE
+            tableHeader.visibility = View.VISIBLE
+            recyclerView.visibility = View.VISIBLE
+            btnToggle.text = "📊 نمودار"
         }
     }
 
-    private fun drawChart(
-        chartContainer: LinearLayout,
+    private fun setupChart(
+        barChart: BarChart,
         reports: List<PersonnelReport>,
+        rawGetter: (PersonnelReport) -> String,
         finalGetter: (PersonnelReport) -> String,
-        title: String
+        sectionColor: Int
     ) {
-        chartContainer.removeAllViews()
+        val names = reports.map { it.userName }
+        val rawValues = reports.map { TimeUtils.timeToDecimalHour(rawGetter(it)).toFloat() }
+        val finalValues = reports.map { TimeUtils.timeToDecimalHour(finalGetter(it)).toFloat() }
 
-        val reportData = reports.map { report ->
-            val hour = TimeUtils.timeToDecimalHour(finalGetter(report))
-            Pair(report, hour)
-        }.filter { it.second > 0 }
+        ChartHelper.applyBaseSettings(barChart, sectionColor)
 
-        if (reportData.isEmpty()) {
-            chartContainer.visibility = View.GONE
-            return
-        }
+        val data = ChartHelper.buildGroupedData(names, rawValues, finalValues, sectionColor)
+        barChart.data = data
 
-        val maxHour = reportData.maxOfOrNull { it.second } ?: 1.0
-        val scaleMax = maxOf(maxHour, 1.0)
+        // ✅ گروه‌بندی
+        val groupSpace = 0.3f
+        val barSpace = 0.05f
 
-        val containerHeight = chartContainer.height
-        val textHeight = 45
-        val maxBarHeight = if (containerHeight > textHeight) {
-            containerHeight - textHeight
-        } else {
-            150
-        }
+        barChart.xAxis.axisMinimum = 0f
+        barChart.xAxis.axisMaximum = 0f + barChart.barData.getGroupWidth(groupSpace, barSpace) * names.size
+        barChart.groupBars(0f, groupSpace, barSpace)
 
-        val itemCount = reportData.size
-
-        reportData.forEachIndexed { index, (report, hour) ->
-            val heightPercent = (hour / scaleMax).toFloat()
-            val barHeight = (heightPercent * maxBarHeight).toInt()
-
-            val barView = LayoutInflater.from(this)
-                .inflate(R.layout.item_bar_chart, chartContainer, false)
-
-            val tvValue = barView.findViewById<TextView>(R.id.tvBarValue)
-            val viewBar = barView.findViewById<View>(R.id.barView)
-            val tvLabel = barView.findViewById<TextView>(R.id.tvBarLabel)
-
-            tvValue.text = String.format("%.1f", hour)
-
-            val layoutParams = viewBar.layoutParams as LinearLayout.LayoutParams
-            layoutParams.height = if (barHeight > 4) barHeight else 4
-            layoutParams.topMargin = maxBarHeight - barHeight
-            viewBar.layoutParams = layoutParams
-
-            tvLabel.text = report.userName
-            tvLabel.maxLines = 2
-            tvLabel.minLines = 2
-
-            val color = when {
-                title.contains("مسئولیت") -> ContextCompat.getColor(this, R.color.primary_blue)
-                title.contains("فنی") -> ContextCompat.getColor(this, R.color.priority_high)
-                title.contains("بررسی") -> ContextCompat.getColor(this, R.color.priority_medium)
-                title.contains("فیزیکی") -> ContextCompat.getColor(this, R.color.primary_green_dark)
-                else -> ContextCompat.getColor(this, R.color.primary_blue)
-            }
-            viewBar.setBackgroundColor(color)
-
-            // تنظیم وزن برای هر نوار (کمتر = باریک‌تر)
-            val barLayoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT)
-            barLayoutParams.weight = 0.7f  // عدد کمتر = باریک‌تر
-            barView.layoutParams = barLayoutParams
-
-            chartContainer.addView(barView)
-
-            // 🔥 اضافه کردن فاصله بین نوارها (به جز بعد از آخرین نوار)
-            if (index < itemCount - 1) {
-                val space = View(this)
-                val spaceParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT)
-                spaceParams.weight = 0.9f  // مقدار فاصله (هرچه بیشتر = فاصله بیشتر)
-                space.layoutParams = spaceParams
-                chartContainer.addView(space)
+        // ✅ XAxis formatter
+        barChart.xAxis.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                val index = value.toInt()
+                return if (index in names.indices) names[index] else ""
             }
         }
+
+        barChart.axisLeft.axisMinimum = 0f
+        barChart.invalidate()
     }
 
     private fun showLoading(show: Boolean) {
         progressBar.visibility = if (show) View.VISIBLE else View.GONE
+    }
+
+    private fun ordinalPersian(n: Int): String {
+        return when (n) {
+            1 -> "اول"
+            2 -> "دوم"
+            3 -> "سوم"
+            4 -> "چهارم"
+            5 -> "پنجم"
+            6 -> "ششم"
+            7 -> "هفتم"
+            8 -> "هشتم"
+            9 -> "نهم"
+            10 -> "دهم"
+            else -> n.toString()
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {

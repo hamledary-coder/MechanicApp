@@ -43,6 +43,64 @@ object TaskSyncer {
     }
 
     /**
+     * چند کار خاص رو از سرور می‌گیره و تو Room ذخیره می‌کنه
+     * @param taskIds لیست ID کارهایی که باید sync بشن
+     * @param onComplete با (تعداد taskهای sync شده) صدا زده می‌شه
+     */
+    fun syncSpecificTasks(
+        context: Context,
+        taskIds: List<String>,
+        onComplete: ((Int) -> Unit)? = null
+    ) {
+        if (taskIds.isEmpty()) {
+            onComplete?.invoke(0)
+            return
+        }
+
+        val idsParam = taskIds.joinToString(",")
+        val url = "${Config.BASE_URL}?action=getTasks&taskIds=$idsParam"
+
+        val request = StringRequest(
+            Request.Method.GET, url,
+            { response ->
+                try {
+                    val jsonArray = JSONArray(response)
+                    val tasks = mutableListOf<TaskModel>()
+
+                    for (i in 0 until jsonArray.length()) {
+                        val obj = jsonArray.getJSONObject(i)
+                        tasks.add(parseTask(obj))
+                    }
+
+                    // ذخیره تو Room (تو یه Coroutine جداگانه)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val db = AppDatabase.getInstance(context)
+
+                        // ← جدید
+                        val filteredEntities = tasks.mapNotNull { task ->
+                            val existing = db.taskDao().getByIdOnce(task.id)
+                            if (existing?.isDeleted == true) null
+                            else TaskMapper.toEntity(task)
+                        }
+
+                        db.taskDao().insertAll(filteredEntities)
+                        onComplete?.invoke(filteredEntities.size)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error parsing specific tasks: ${e.message}")
+                    onComplete?.invoke(0)
+                }
+            },
+            { error ->
+                Log.e(TAG, "Error fetching specific tasks: ${error.message}")
+                onComplete?.invoke(0)
+            }
+        )
+
+        VolleySingleton.getInstance(context).add(request)
+    }
+
+    /**
      * تبدیل JSONObject سرور به TaskModel
      * دقیقاً همون کد fetchTasks توی WorkListFragment
      */
@@ -60,7 +118,7 @@ object TaskSyncer {
             responsible = obj.optString("responsible", ""),
             pendingInvites = obj.optString("pendingInvites", ""),
             unit = obj.optString("unit", ""),
-            priority = obj.optString("priority", ""),
+            priority = obj.optInt("priority", 50),
             sub_unit = obj.optString("sub_unit", ""),
             declaration_method = obj.optString("declaration_method", ""),
             requester = obj.optString("requester", ""),

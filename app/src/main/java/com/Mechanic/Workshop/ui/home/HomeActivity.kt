@@ -1,6 +1,7 @@
 package com.Mechanic.Workshop.ui.home
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.ProgressBar
@@ -9,9 +10,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.cardview.widget.CardView
+import androidx.core.app.ActivityCompat
 import com.Mechanic.Workshop.R
 import com.Mechanic.Workshop.data.remote.Config
-import com.Mechanic.Workshop.data.sync.TaskSyncer
 import com.Mechanic.Workshop.ui.archive.ArchiveActivity
 import com.Mechanic.Workshop.ui.cartable.CartableActivity
 import com.Mechanic.Workshop.ui.chat.ChatActivity
@@ -20,12 +21,10 @@ import com.Mechanic.Workshop.ui.reports.ReportsActivity
 import com.Mechanic.Workshop.ui.settings.SettingsActivity
 import com.Mechanic.Workshop.ui.task.quicklog.QuickLogActivity
 import com.Mechanic.Workshop.utils.UserCache
-import com.Mechanic.Workshop.utils.VolleySingleton
-import com.android.volley.Request
-import com.android.volley.toolbox.JsonArrayRequest
-import org.json.JSONObject
 import androidx.lifecycle.lifecycleScope
 import com.Mechanic.Workshop.data.local.TaskLocalRepository
+import com.Mechanic.Workshop.data.sync.TaskSyncer
+import com.Mechanic.Workshop.notifications.NotificationPermissionManager
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -45,20 +44,24 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var taskLocalRepository: TaskLocalRepository
     private var responsibleTasksJob: Job? = null
 
+    companion object {
+        private const val PERMISSION_REQUEST_CODE = 1001
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
+
+        // ← اول taskLocalRepository رو مقداردهی کن
+        taskLocalRepository = TaskLocalRepository(this)
 
         initViews()
         setupToolbar()
         loadUserData()
         setupClickListeners()
 
-        // ====== اطمینان از خاموش بودن کارت در ابتدا ======
         setQuickLogCardEnabled(false)
-
-        taskLocalRepository = TaskLocalRepository(this)
     }
 
     override fun onResume() {
@@ -100,9 +103,9 @@ class HomeActivity : AppCompatActivity() {
                 showLoading(false)
                 disableCards(false)
                 checkUserHasResponsibleTasks()
+                requestNotificationPermission()
             }
 
-            // ← این خط رو اضافه کن (بیرون از runOnUiThread)
             val userId = sharedPref.getString(Config.PrefKeys.USER_ROW_ID, "") ?: ""
             TaskSyncer.syncTasksFromServer(this, userId) { count ->
                 Log.d("HomeActivity", "Synced $count tasks to Room")
@@ -189,6 +192,30 @@ class HomeActivity : AppCompatActivity() {
         cards.forEach { card ->
             card.isEnabled = !disable
             card.alpha = alpha
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (!NotificationPermissionManager.hasPermission(this)) {
+            val permissions = NotificationPermissionManager.getPermissionToRequest()
+            if (permissions.isNotEmpty()) {
+                ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "نوتیفیکیشن فعال شد", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "برای دریافت نوتیفیکیشن، مجوز بدید", Toast.LENGTH_LONG).show()
+            }
         }
     }
 }

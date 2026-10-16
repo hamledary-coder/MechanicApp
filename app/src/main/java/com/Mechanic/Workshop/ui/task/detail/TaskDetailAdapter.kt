@@ -176,6 +176,10 @@ class TaskDetailAdapter(
         private val tvTaskTitle: TextView = itemView.findViewById(R.id.tvTaskTitle)
         private val tvTaskDescription: TextView = itemView.findViewById(R.id.tvTaskDescription)
         private val tvTaskResponsible: TextView = itemView.findViewById(R.id.tvTaskResponsible)
+
+        private val tvTaskPriority: TextView = itemView.findViewById(R.id.tvTaskPriority)
+        private val layoutPriority: LinearLayout = itemView.findViewById(R.id.layoutPriority)
+
         private val tvTaskAssignees: TextView = itemView.findViewById(R.id.tvTaskAssignees)
         private val tvTaskUnit: TextView = itemView.findViewById(R.id.tvTaskUnit)
         private val tvTaskUrgency: TextView = itemView.findViewById(R.id.tvTaskUrgency)
@@ -223,6 +227,19 @@ class TaskDetailAdapter(
                 cardDescription.visibility = View.VISIBLE
             } else {
                 cardDescription.visibility = View.GONE
+            }
+
+            // اولویت
+            if (task.priority == 50) {
+                layoutPriority.visibility = View.GONE
+            } else {
+                layoutPriority.visibility = View.VISIBLE
+                tvTaskPriority.text = task.priority.toString()
+                when {
+                    task.priority >= 80 -> tvTaskPriority.setTextColor(Color.parseColor("#D32F2F"))
+                    task.priority >= 50 -> tvTaskPriority.setTextColor(Color.parseColor("#FF9800"))
+                    else -> tvTaskPriority.setTextColor(Color.parseColor("#4CAF50"))
+                }
             }
 
             // مسئول

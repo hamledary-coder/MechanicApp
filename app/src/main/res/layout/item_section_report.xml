@@ -96,19 +96,12 @@
                 android:nestedScrollingEnabled="false" />
 
             <!-- نمودار میلهای (ساده) -->
-            <LinearLayout
-                android:id="@+id/chartContainer"
+            <com.github.mikephil.charting.charts.BarChart
+                android:id="@+id/barChart"
                 android:layout_width="match_parent"
-                android:layout_height="220dp"
-                android:orientation="horizontal"
-                android:gravity="bottom"
+                android:layout_height="280dp"
                 android:visibility="gone"
-                android:layout_marginTop="8dp"
-                android:clipChildren="false"
-                android:clipToPadding="false"
-                android:weightSum="10.0">
-
-            </LinearLayout>
+                android:layout_marginTop="8dp" />
 
         </LinearLayout>
 

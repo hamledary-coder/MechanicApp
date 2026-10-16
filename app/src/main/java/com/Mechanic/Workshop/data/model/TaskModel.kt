@@ -9,7 +9,7 @@ data class TaskModel(
     var responsible: String = "",
     val pendingInvites: String = "",
     val unit: String = "",
-    val priority: String = "",
+    val priority: Int = 50,
     // فیلدهای جدید
     val sub_unit: String = "",
     val declaration_method: String = "",

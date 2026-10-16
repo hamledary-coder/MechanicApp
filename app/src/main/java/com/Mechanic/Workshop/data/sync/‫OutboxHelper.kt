@@ -179,6 +179,7 @@ object OutboxHelper {
             put("declaration_method", task.declaration_method)
             put("requester", task.requester)
             put("request_date", task.request_date)
+            put("priority", task.priority)
             put("urgency", task.urgency)
             put("initial_review", task.initial_review)
             put("system_request_number", task.system_request_number)

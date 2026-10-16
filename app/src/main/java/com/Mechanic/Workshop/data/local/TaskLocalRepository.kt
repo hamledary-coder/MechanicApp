@@ -2,6 +2,7 @@ package com.Mechanic.Workshop.data.local
 
 import TaskModel
 import android.content.Context
+import android.util.Log
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.data.sync.TaskMapper
 import kotlinx.coroutines.flow.Flow
@@ -74,22 +75,27 @@ class TaskLocalRepository(private val context: Context) {
     }
 
     suspend fun deleteTaskLocally(taskId: String) {
-        // ۱. task رو isDeleted = true
-        val task = db.taskDao().getById(taskId) ?: return
+        Log.d("DEBUG_DELETE", "1. deleteTaskLocally called: $taskId")
+
+        val task = db.taskDao().getById(taskId) ?: run {
+            Log.e("DEBUG_DELETE", "2. task not found!")
+            return
+        }
+
+        Log.d("DEBUG_DELETE", "2. task found. isDeleted before = ${task.isDeleted}")
+
         db.taskDao().update(task.copy(isDeleted = true))
 
-        // ۲. گزارش‌های این کار رو پیدا کن
-        val reports = db.reportDao().getByTaskOnce(taskId)
-        val reportIds = reports.map { it.id }
+        Log.d("DEBUG_DELETE", "3. updated. isDeleted should be true now")
 
-        // ۳. گزارش‌ها رو پاک کن
+        // چک فوری
+        val check = db.taskDao().getById(taskId)
+        Log.d("DEBUG_DELETE", "4. right after update: isDeleted = ${check?.isDeleted}")
+
         db.reportDao().deleteAllByTaskId(taskId)
+        db.outboxDao().deleteByTargetId(taskId)
 
-        // ۴. Outbox ها رو پاک کن
-        db.outboxDao().deleteByTargetId(taskId)   // addTaskLog, updateTaskLog, deleteTaskLog, updateTaskStatus
-        if (reportIds.isNotEmpty()) {
-            db.outboxDao().deleteByTargetIds(reportIds)   // updateEvaluation
-        }
+        Log.d("DEBUG_DELETE", "5. deleteTaskLocally done")
     }
 
     suspend fun updateTaskFromEdit(updatedTask: TaskModel) {
@@ -103,6 +109,7 @@ class TaskLocalRepository(private val context: Context) {
                 declarationMethod = updatedTask.declaration_method,
                 requester = updatedTask.requester,
                 requestDate = updatedTask.request_date,
+                priority = updatedTask.priority,
                 urgency = updatedTask.urgency,
                 initialReview = updatedTask.initial_review,
                 systemRequestNumber = updatedTask.system_request_number
@@ -115,4 +122,5 @@ class TaskLocalRepository(private val context: Context) {
             entities.map { TaskMapper.toModel(it) }
         }
     }
+
 }

@@ -131,7 +131,7 @@ class TaskDetailActivity : AppCompatActivity() {
             responsible = intent.getStringExtra("RESPONSIBLE") ?: "",
             pendingInvites = "",
             unit = intent.getStringExtra("UNIT") ?: "",
-            priority = intent.getStringExtra("PRIORITY") ?: "",
+            priority = intent.getIntExtra("PRIORITY", 50),
             sub_unit = intent.getStringExtra("SUB_UNIT") ?: "",
             declaration_method = intent.getStringExtra("DECLARATION_METHOD") ?: "",
             requester = intent.getStringExtra("REQUESTER") ?: "",
@@ -439,6 +439,7 @@ class TaskDetailActivity : AppCompatActivity() {
         intent.putExtra("INITIAL_REVIEW", task.initial_review)
         intent.putExtra("SYSTEM_REQUEST_NUMBER", task.system_request_number)
         intent.putExtra("URGENCY", task.urgency)
+        intent.putExtra("PRIORITY", task.priority)
         intent.putExtra("OLD_TITLE", task.title)
         intent.putExtra("OLD_UNIT", task.unit)
         intent.putExtra("OLD_PRIORITY", task.priority)

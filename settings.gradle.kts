@@ -26,6 +26,8 @@ dependencyResolutionManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
+        maven { url = uri("https://maven.aliyun.com/repository/jcenter") }
+
         maven { url = uri("https://www.jitpack.io") }
         mavenCentral()
     }

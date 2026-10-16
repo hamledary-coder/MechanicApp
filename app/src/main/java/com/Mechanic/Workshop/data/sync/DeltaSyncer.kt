@@ -4,6 +4,7 @@ import TaskModel
 import android.content.Context
 import android.util.Log
 import com.Mechanic.Workshop.data.local.AppDatabase
+import com.Mechanic.Workshop.data.local.entity.TaskEntity
 import com.Mechanic.Workshop.data.model.TaskLogModel
 import com.Mechanic.Workshop.data.remote.Config
 import com.Mechanic.Workshop.utils.VolleySingleton
@@ -33,6 +34,7 @@ object DeltaSyncer {
         val lastSync = prefs.getString(PREF_KEY_LAST_SYNC, DEFAULT_SINCE) ?: DEFAULT_SINCE
 
         Log.d(TAG, "Starting delta sync since: $lastSync")
+        Log.d("DEBUG_SYNC", "syncDelta started, lastSync = $lastSync")
 
         val url = "${Config.BASE_URL}?action=getDelta&since=${java.net.URLEncoder.encode(lastSync, "UTF-8")}"
 
@@ -54,10 +56,18 @@ object DeltaSyncer {
                             val db = AppDatabase.getInstance(context)
 
                             // ۱. کارها
-                            val taskEntities = mutableListOf<com.Mechanic.Workshop.data.local.entity.TaskEntity>()
+                            val taskEntities = mutableListOf<TaskEntity>()
                             for (i in 0 until tasksArray.length()) {
                                 val obj = tasksArray.getJSONObject(i)
                                 val task = parseTask(obj)
+
+                                // ← جدید
+                                val existing = db.taskDao().getByIdOnce(task.id)
+                                if (existing?.isDeleted == true) {
+                                    Log.d(TAG, "Skipping deleted task: ${task.id}")
+                                    continue
+                                }
+
                                 taskEntities.add(TaskMapper.toEntity(task))
                             }
                             if (taskEntities.isNotEmpty()) {
@@ -95,6 +105,7 @@ object DeltaSyncer {
                             }
 
                             if (deletedTaskIds.isNotEmpty()) {
+                                Log.d("DEBUG_SYNC", "deleted taskIds: $deletedTaskIds")
                                 db.taskDao().deleteByIds(deletedTaskIds)
                                 Log.d(TAG, "Deleted ${deletedTaskIds.size} tasks from Room")
                             }
@@ -161,7 +172,7 @@ object DeltaSyncer {
             responsible = obj.optString("responsible", ""),
             pendingInvites = obj.optString("pendingInvites", ""),
             unit = obj.optString("unit", ""),
-            priority = obj.optString("priority", ""),
+            priority = obj.optInt("priority", 50),
             sub_unit = obj.optString("sub_unit", ""),
             declaration_method = obj.optString("declaration_method", ""),
             requester = obj.optString("requester", ""),
